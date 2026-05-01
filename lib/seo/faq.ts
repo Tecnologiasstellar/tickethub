@@ -38,7 +38,7 @@ export function buildEventFaqs(data: {
   if (data.minPrice != null) {
     faqs.push({
       question: `¿Cuánto cuestan los boletos para ${data.artistName ?? data.title}?`,
-      answer: `El precio mínimo actual es desde ${fmt.format(data.minPrice)} MXN. Los precios varían según la categoría y la plataforma de compra.`,
+      answer: `El precio mínimo actual es desde ${fmt.format(data.minPrice)}. Los precios varían según la categoría y la plataforma de compra.`,
     });
   }
 
