@@ -19,16 +19,16 @@ export function FaqAccordion({
       >
         {title}
       </h2>
-      <dl className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)]">
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)]">
         {faqs.map((faq, i) => (
           <details
             key={i}
             className="group border-b border-[var(--color-border-subtle)] bg-[var(--color-surface)] last:border-b-0"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 transition-colors hover:bg-[var(--color-surface-2)]">
-              <dt className="text-sm font-medium text-[var(--color-text)]">
+              <span className="text-sm font-medium text-[var(--color-text)]">
                 {faq.question}
-              </dt>
+              </span>
               <span
                 aria-hidden
                 className="ml-3 shrink-0 text-[var(--color-text-muted)] transition-transform duration-[var(--duration-fast)] group-open:rotate-180"
@@ -36,12 +36,12 @@ export function FaqAccordion({
                 ▾
               </span>
             </summary>
-            <dd className="px-5 pb-4 pt-1 text-sm leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
+            <div className="px-5 pb-4 pt-1 text-sm leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
               {faq.answer}
-            </dd>
+            </div>
           </details>
         ))}
-      </dl>
+      </div>
     </section>
   );
 }
