@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
 export function SearchBar({
@@ -9,12 +10,13 @@ export function SearchBar({
   placeholder?: string;
 }) {
   const [query, setQuery] = useState("");
+  const router = useRouter();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
-    window.location.href = `/buscar?q=${encodeURIComponent(q)}`;
+    router.push(`/buscar?q=${encodeURIComponent(q)}`);
   }
 
   return (
@@ -29,6 +31,7 @@ export function SearchBar({
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder={placeholder}
+        aria-label="Buscar eventos"
         className="h-12 flex-1 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary-ring)]"
       />
       <Button type="submit" size="lg" variant="primary">

@@ -22,7 +22,7 @@ const GENRE_DISPLAY: Record<string, string> = {
 export function GenreChips({ genres }: { genres: string[] }) {
   if (!genres.length) return null;
   return (
-    <div className="flex flex-wrap gap-2">
+    <nav aria-label="Géneros" className="flex flex-wrap gap-2">
       {genres.map(genre => (
         <a
           key={genre}
@@ -32,6 +32,6 @@ export function GenreChips({ genres }: { genres: string[] }) {
           {GENRE_DISPLAY[genre] ?? genre}
         </a>
       ))}
-    </div>
+    </nav>
   );
 }
