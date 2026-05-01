@@ -88,6 +88,7 @@ export async function getVenueSlugs(): Promise<string[]> {
     SELECT DISTINCT v.slug
     FROM venues v
     JOIN events e ON e.venue_id = v.id
+    WHERE e.status = 'active'
   `);
   return rows.map(r => r.slug);
 }

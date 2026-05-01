@@ -73,6 +73,8 @@ export interface CityRow {
   slug: string;
   country: string;
   tier: number;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface ArtistRow {
