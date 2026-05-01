@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
 import { SetlistPreview } from "@/components/SetlistPreview";
 import { TourHistoryTimeline } from "@/components/TourHistoryTimeline";
@@ -118,7 +119,7 @@ export default async function ArtistaPage({ params }: Props) {
         <nav aria-label="Breadcrumb" className="mb-6">
           <ol className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <li>
-              <a href="/" className="hover:text-[var(--color-primary)]">Inicio</a>
+              <Link href="/" className="hover:text-[var(--color-primary)]">Inicio</Link>
             </li>
             <li aria-hidden>›</li>
             <li aria-current="page" className="text-[var(--color-text)]">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CopyrightYear } from "@/components/CopyrightYear";
 
 export function Footer() {
@@ -17,9 +18,9 @@ export function Footer() {
             </p>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--color-text-muted)]">
-            <a href="/" className="hover:text-[var(--color-text)] transition-colors">
+            <Link href="/" className="hover:text-[var(--color-text)] transition-colors">
               Inicio
-            </a>
+            </Link>
           </nav>
         </div>
         <p className="mt-8 text-xs text-[var(--color-text-subtle)]">

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
 import { VenueMap } from "@/components/VenueMap";
 import { DataPill } from "@/components/ui/DataPill";
@@ -94,7 +95,7 @@ export default async function VenuePage({ params }: Props) {
         <nav aria-label="Breadcrumb" className="mb-4">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <li>
-              <a href="/" className="hover:text-[var(--color-primary)]">Inicio</a>
+              <Link href="/" className="hover:text-[var(--color-primary)]">Inicio</Link>
             </li>
             {venue.city_slug && (
               <>
