@@ -1,5 +1,6 @@
+import { CopyrightYear } from "@/components/CopyrightYear";
+
 export function Footer() {
-  const year = new Date().getFullYear();
   return (
     <footer className="mt-16 border-t border-[var(--color-border)]">
       <div className="mx-auto max-w-[var(--container-max)] px-4 py-10">
@@ -22,7 +23,7 @@ export function Footer() {
           </nav>
         </div>
         <p className="mt-8 text-xs text-[var(--color-text-subtle)]">
-          © {year} TicketHub.mx — Comparador independiente de boletos.
+          © <CopyrightYear /> TicketHub.mx — Comparador independiente de boletos.
         </p>
       </div>
     </footer>

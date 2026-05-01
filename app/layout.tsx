@@ -46,7 +46,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${syne.variable}`}>
       <body>
         <Navbar />
-        {children}
+        <main>{children}</main>
         <Footer />
       </body>
     </html>
