@@ -30,8 +30,8 @@ export function EventsByMonth({
   const [period, setPeriod] = useState<Period>("all");
   const [maxPrice, setMaxPrice] = useState("");
 
-  const now = Date.now();
   const filtered = useMemo(() => {
+    const now = Date.now();
     let result = events;
 
     if (genreFilter !== "all") {
@@ -57,7 +57,7 @@ export function EventsByMonth({
     }
 
     return result;
-  }, [events, genreFilter, period, maxPrice, now]);
+  }, [events, genreFilter, period, maxPrice]);
 
   const byMonth = useMemo(() => Array.from(groupByMonth(filtered).entries()), [filtered]);
 
