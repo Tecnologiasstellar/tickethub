@@ -20,7 +20,9 @@
     "scrape:superboletos": "dotenv -e .env.local -- tsx scripts/scrape-superboletos.ts",
     "test:dedupe": "dotenv -e .env.local -- tsx scripts/test-dedupe.ts",
     "enrich:spotify": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts",
-    "enrich:spotify:dry": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts --dry-run"
+    "enrich:spotify:dry": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts --dry-run",
+    "ingest:songkick": "dotenv -e .env.local -- tsx scripts/ingest-songkick.ts",
+    "ingest:songkick:dry": "dotenv -e .env.local -- tsx scripts/ingest-songkick.ts --dry-run"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
