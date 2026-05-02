@@ -12,7 +12,7 @@ async function extractEventLinks(page: Page): Promise<string[]> {
     const links = Array.from(document.querySelectorAll("a[href]")) as HTMLAnchorElement[];
     return links
       .map((a) => a.href)
-      .filter((href) => /boletia\.com\/(eventos?|e)\/[^/]+$/.test(href));
+      .filter((href) => /boletia\.com\/(evento|e)\/[^/]+$/.test(href));
   });
   return [...new Set(hrefs)];
 }
