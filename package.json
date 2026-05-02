@@ -28,7 +28,9 @@
     "fetch:setlists": "dotenv -e .env.local -- tsx scripts/fetch-setlists.ts",
     "fetch:setlists:dry": "dotenv -e .env.local -- tsx scripts/fetch-setlists.ts --dry-run",
     "ingest:stubhub": "dotenv -e .env.local -- tsx scripts/ingest-stubhub.ts",
-    "ingest:stubhub:dry": "dotenv -e .env.local -- tsx scripts/ingest-stubhub.ts --dry-run"
+    "ingest:stubhub:dry": "dotenv -e .env.local -- tsx scripts/ingest-stubhub.ts --dry-run",
+    "enrich:ticketmaster": "dotenv -e .env.local -- tsx scripts/enrich-ticketmaster.ts",
+    "enrich:ticketmaster:dry": "dotenv -e .env.local -- tsx scripts/enrich-ticketmaster.ts --dry-run"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
