@@ -8,6 +8,8 @@ import {
   type EventData,
 } from "./prompts";
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 const EventContentSchema = z.object({
   seo_title:       z.string().min(10).max(60),
   seo_description: z.string().min(20).max(160),
@@ -29,7 +31,7 @@ async function markJobStatus(
   status: "processing" | "done" | "failed",
   lastError?: string
 ) {
-  await queryOne(
+  await query(
     `UPDATE content_jobs
      SET status=$1, last_error=$2, attempts=attempts+1, updated_at=NOW()
      WHERE entity_type='event' AND entity_id=$3 AND job_type=$4`,
@@ -95,8 +97,6 @@ export async function generateEventContext(eventId: string): Promise<EventConten
     currency:   row.currency,
   };
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
@@ -107,7 +107,15 @@ export async function generateEventContext(eventId: string): Promise<EventConten
   });
 
   const raw = completion.choices[0]?.message?.content ?? "";
-  const parsed = EventContentSchema.safeParse(JSON.parse(raw));
+  let jsonParsed: unknown;
+  try {
+    jsonParsed = JSON.parse(raw);
+  } catch (e) {
+    const err = `invalid JSON from OpenAI: ${e instanceof Error ? e.message : String(e)}`;
+    await markJobStatus(eventId, JOB_TYPE, "failed", err);
+    throw new Error(`[generate-event-context] ${err}`);
+  }
+  const parsed = EventContentSchema.safeParse(jsonParsed);
 
   if (!parsed.success) {
     const err = `validation failed: ${parsed.error.message}`;
