@@ -22,7 +22,9 @@
     "enrich:spotify": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts",
     "enrich:spotify:dry": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts --dry-run",
     "ingest:songkick": "dotenv -e .env.local -- tsx scripts/ingest-songkick.ts",
-    "ingest:songkick:dry": "dotenv -e .env.local -- tsx scripts/ingest-songkick.ts --dry-run"
+    "ingest:songkick:dry": "dotenv -e .env.local -- tsx scripts/ingest-songkick.ts --dry-run",
+    "fetch:setlists": "dotenv -e .env.local -- tsx scripts/fetch-setlists.ts",
+    "fetch:setlists:dry": "dotenv -e .env.local -- tsx scripts/fetch-setlists.ts --dry-run"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
