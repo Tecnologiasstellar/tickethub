@@ -80,6 +80,7 @@ export interface ArtistRow {
   name: string;
   slug: string;
   spotify_id: string | null;
+  mbid: string | null;
   image_url: string | null;
   genres: string[] | null;
   popularity: number | null;

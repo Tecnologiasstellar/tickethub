@@ -11,6 +11,7 @@
     "db:init": "dotenv -e .env.local -- tsx scripts/init-db.ts",
     "db:seed-cities": "dotenv -e .env.local -- tsx scripts/seed-cities.ts",
     "db:seed-hero": "dotenv -e .env.local -- tsx scripts/seed-hero-events.ts",
+    "db:migrate-mbid": "dotenv -e .env.local -- tsx scripts/migrate-add-mbid.ts",
     "ingest:events": "dotenv -e .env.local -- tsx scripts/ingest-events.ts",
     "content:generate": "dotenv -e .env.local -- tsx scripts/generate-content.ts",
     "scrape:boletia": "dotenv -e .env.local -- tsx scripts/scrape-boletia.ts",
@@ -18,30 +19,31 @@
     "test:dedupe": "dotenv -e .env.local -- tsx scripts/test-dedupe.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "date-fns": "^4.1.0",
     "next": "15.5.15",
+    "openai": "^4.98.0",
+    "playwright": "^1.59.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@neondatabase/serverless": "^0.10.4",
-    "openai": "^4.98.0",
     "slugify": "^1.6.6",
-    "date-fns": "^4.1.0",
     "string-similarity": "^4.0.4",
-    "zod": "^3.24.3",
-    "ws": "^8.18.2"
+    "ws": "^8.18.2",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/string-similarity": "^4.0.2",
     "@types/ws": "^8.5.14",
-    "typescript": "^5.8.3",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.5.15",
+    "postcss": "^8.5.3",
     "tailwindcss": "^4.1.6",
-    "@tailwindcss/postcss": "^4.1.6",
     "tsx": "^4.19.2",
-    "dotenv-cli": "^8.0.0",
-    "postcss": "^8.5.3"
+    "typescript": "^5.8.3"
   }
 }
