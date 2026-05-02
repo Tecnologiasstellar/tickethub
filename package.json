@@ -19,6 +19,7 @@
     "scrape:boletia": "dotenv -e .env.local -- tsx scripts/scrape-boletia.ts",
     "scrape:boletia:dry": "dotenv -e .env.local -- tsx scripts/scrape-boletia.ts --dry-run",
     "scrape:superboletos": "dotenv -e .env.local -- tsx scripts/scrape-superboletos.ts",
+    "scrape:superboletos:dry": "dotenv -e .env.local -- tsx scripts/scrape-superboletos.ts --dry-run",
     "test:dedupe": "dotenv -e .env.local -- tsx scripts/test-dedupe.ts",
     "enrich:spotify": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts",
     "enrich:spotify:dry": "dotenv -e .env.local -- tsx scripts/enrich-spotify.ts --dry-run",
