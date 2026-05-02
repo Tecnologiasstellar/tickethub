@@ -12,6 +12,7 @@
     "db:seed-cities": "dotenv -e .env.local -- tsx scripts/seed-cities.ts",
     "db:seed-hero": "dotenv -e .env.local -- tsx scripts/seed-hero-events.ts",
     "db:migrate-mbid": "dotenv -e .env.local -- tsx scripts/migrate-add-mbid.ts",
+    "db:migrate-content-cols": "dotenv -e .env.local -- tsx scripts/migrate-add-content-cols.ts",
     "ingest:events": "dotenv -e .env.local -- tsx scripts/ingest-events.ts",
     "ingest:events:dry": "dotenv -e .env.local -- tsx scripts/ingest-events.ts --dry-run",
     "ingest:eventbrite": "dotenv -e .env.local -- tsx scripts/ingest-eventbrite.ts",
