@@ -31,14 +31,14 @@ const CITY_MAP: Record<string, string> = {
 
 function normalizeCity(raw?: string): string | null {
   if (!raw) return null;
-  return CITY_MAP[raw] ?? raw;
+  return CITY_MAP[raw] ?? null;
 }
 
 export function normalizeEventbriteEvent(
   ev: EBEvent
 ): NormalizedEvent | null {
   // Skip unlisted, non-live, or draft events
-  if (!ev.listed || ev.status === "draft" || ev.status === "completed") return null;
+  if (!ev.listed || ev.status === "draft" || ev.status === "completed" || ev.status === "cancelled") return null;
 
   const title = ev.name.text.trim();
   const artistName = extractArtist(title);
