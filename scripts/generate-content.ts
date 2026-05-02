@@ -70,6 +70,11 @@ async function main() {
   console.log(
     `[generate-content] done. processed=${stats.processed} done=${stats.done} failed=${stats.failed}`
   );
+
+  if (stats.processed > 0 && stats.done === 0) {
+    console.error("[generate-content] all jobs failed — exiting with code 1");
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

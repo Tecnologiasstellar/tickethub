@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
         } else if (job.entity_type === "venue") {
           await generateVenueDescription(job.entity_id);
         } else {
-          await queryOne(
-            `UPDATE content_jobs SET status='failed', last_error=$1, updated_at=NOW() WHERE id=$2`,
+          await query(
+            `UPDATE content_jobs SET status='failed', last_error=$1, attempts=attempts+1, updated_at=NOW() WHERE id=$2`,
             [`unknown entity_type: ${job.entity_type}`, job.id]
           );
           stats.failed++;

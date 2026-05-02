@@ -33,7 +33,9 @@ async function markJobStatus(
 ) {
   await query(
     `UPDATE content_jobs
-     SET status=$1, last_error=$2, attempts=attempts+1, updated_at=NOW()
+     SET status=$1, last_error=$2,
+         attempts = CASE WHEN $1 = 'processing' THEN attempts+1 ELSE attempts END,
+         updated_at=NOW()
      WHERE entity_type='event' AND entity_id=$3 AND job_type=$4`,
     [status, lastError ?? null, eventId, jobType]
   );
