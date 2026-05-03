@@ -300,21 +300,33 @@ async function main() {
       `SELECT id FROM events WHERE content_status = 'queued' LIMIT $1`,
       [limitArg],
     );
-    await enqueueJobs("event", eventIds.map((r) => r.id));
+    if (dryRun) {
+      console.log(`[dry-run] would enqueue ${eventIds.length} event jobs`);
+    } else {
+      await enqueueJobs("event", eventIds.map((r) => r.id));
+    }
   }
   if (targetTypes.includes("artist")) {
     const artistIds = await query<{ id: string }>(
       `SELECT id FROM artists WHERE content_status = 'queued' LIMIT $1`,
       [limitArg],
     );
-    await enqueueJobs("artist", artistIds.map((r) => r.id));
+    if (dryRun) {
+      console.log(`[dry-run] would enqueue ${artistIds.length} artist jobs`);
+    } else {
+      await enqueueJobs("artist", artistIds.map((r) => r.id));
+    }
   }
   if (targetTypes.includes("venue")) {
     const venueIds = await query<{ id: string }>(
       `SELECT id FROM venues WHERE content_status = 'queued' LIMIT $1`,
       [limitArg],
     );
-    await enqueueJobs("venue", venueIds.map((r) => r.id));
+    if (dryRun) {
+      console.log(`[dry-run] would enqueue ${venueIds.length} venue jobs`);
+    } else {
+      await enqueueJobs("venue", venueIds.map((r) => r.id));
+    }
   }
 
   // Process
