@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { EventCard } from "@/components/EventCard";
@@ -70,9 +71,9 @@ export default async function CiudadPage({ params }: Props) {
         <nav aria-label="Breadcrumb" className="mb-4">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <li>
-              <a href="/" className="hover:text-[var(--color-primary)]">
+              <Link href="/" className="hover:text-[var(--color-primary)]">
                 Inicio
-              </a>
+              </Link>
             </li>
             <li aria-hidden>›</li>
             <li className="text-[var(--color-text)]" aria-current="page">

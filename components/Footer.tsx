@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   const year = new Date().getFullYear();
   return (
@@ -14,7 +16,7 @@ export function Footer() {
             </p>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--color-text-muted)]">
-            <a href="/" className="hover:text-[var(--color-text)] transition-colors">Inicio</a>
+            <Link href="/" className="hover:text-[var(--color-text)] transition-colors">Inicio</Link>
           </nav>
         </div>
         <p className="mt-8 text-xs text-[var(--color-text-subtle)]">© {year} TicketHub.mx — Comparador independiente de boletos.</p>
