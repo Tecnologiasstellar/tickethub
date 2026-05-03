@@ -162,6 +162,7 @@ export async function getAllActiveGenres(): Promise<GenreMeta[]> {
  * Returns null if no upcoming events exist for this genre.
  */
 export async function getGenreBySlug(genreSlug: string): Promise<GenreMeta | null> {
+  // Slugs are computed in JS (slugify can't run in Postgres), so we fetch all and match.
   const genres = await getAllActiveGenres();
   return genres.find((g) => g.slug === genreSlug) ?? null;
 }
@@ -225,18 +226,19 @@ export async function getSitemapArtistRows(): Promise<SitemapSlugRow[]> {
     FROM artists a
     JOIN events e ON e.artist_id = a.id
     WHERE a.content_status = 'published'
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
       AND e.date > NOW()
     ORDER BY a.slug
   `);
 }
 
 export async function getSitemapCityRows(): Promise<SitemapSlugRow[]> {
+  // Cities have no content_status; surface any city that has upcoming active events.
   return query<SitemapSlugRow>(`
     SELECT DISTINCT ON (c.slug) c.slug, c.updated_at
     FROM cities c
     JOIN events e ON e.city_id = c.id
-    WHERE e.status = 'active'
+    WHERE e.status IN ('active', 'sold_out')
       AND e.date > NOW()
     ORDER BY c.slug
   `);
@@ -248,7 +250,7 @@ export async function getSitemapVenueRows(): Promise<SitemapSlugRow[]> {
     FROM venues v
     JOIN events e ON e.venue_id = v.id
     WHERE v.content_status = 'published'
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
       AND e.date > NOW()
     ORDER BY v.slug
   `);
