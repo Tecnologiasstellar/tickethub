@@ -19,6 +19,8 @@ export interface EventHeroProps {
   secondaryAction?: ReactNode;
   badges?: ReactNode;
   className?: string;
+  /** tier1 = full hero with background image; tier2 = compact, no bg image */
+  variant?: "tier1" | "tier2";
 }
 
 export function EventHero({
@@ -35,7 +37,10 @@ export function EventHero({
   secondaryAction,
   badges,
   className,
+  variant = "tier1",
 }: EventHeroProps) {
+  const isTier2 = variant === "tier2";
+
   return (
     <section
       className={cn(
@@ -43,7 +48,7 @@ export function EventHero({
         className,
       )}
     >
-      {imageUrl ? (
+      {!isTier2 && imageUrl ? (
         <>
           <div
             aria-hidden
@@ -57,7 +62,12 @@ export function EventHero({
         </>
       ) : null}
 
-      <div className="relative grid gap-8 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-10">
+      <div
+        className={cn(
+          "relative grid gap-8 md:grid-cols-[1fr_auto] md:items-end",
+          isTier2 ? "p-6 md:p-8" : "p-6 md:p-10",
+        )}
+      >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {artistName ? (
@@ -68,7 +78,12 @@ export function EventHero({
             {badges}
           </div>
 
-          <h1 className="font-display mt-4 text-3xl font-bold leading-[var(--leading-tight)] text-[var(--color-text)] md:text-5xl">
+          <h1
+            className={cn(
+              "font-display mt-4 font-bold leading-[var(--leading-tight)] text-[var(--color-text)]",
+              isTier2 ? "text-2xl md:text-3xl" : "text-3xl md:text-5xl",
+            )}
+          >
             {title}
           </h1>
 
@@ -80,15 +95,8 @@ export function EventHero({
           </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <DataPill
-              label="Fecha"
-              value={formatDateTime(date)}
-            />
-            <DataPill
-              label="Ciudad"
-              value={cityName}
-              hint={venueName}
-            />
+            <DataPill label="Fecha" value={formatDateTime(date)} />
+            <DataPill label="Ciudad" value={cityName} hint={venueName} />
             {minPrice !== undefined ? (
               <DataPill
                 label="Desde"
