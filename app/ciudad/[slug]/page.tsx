@@ -16,6 +16,7 @@ export const dynamicParams = true;
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
+  if (!process.env.DATABASE_URL) return [];
   const cities = await getAllCitySlugsWithEvents();
   return cities.map((c) => ({ slug: c.slug }));
 }
