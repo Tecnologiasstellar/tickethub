@@ -13,6 +13,24 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  if (!process.env.DATABASE_URL) {
+    return (
+      <main>
+        <section className="border-b border-[var(--color-border)] bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-background)] py-16 md:py-24">
+          <div className="mx-auto max-w-[var(--container-max)] px-4 text-center">
+            <h1 className="font-display text-4xl font-bold leading-[var(--leading-tight)] text-[var(--color-text)] md:text-6xl">
+              Compara boletos en <span className="text-[var(--color-primary)]">un solo lugar</span>
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-lg text-[var(--color-text-muted)] md:text-xl">
+              Conciertos, festivales y eventos en México. Encuentra el precio más bajo entre Boletia, Eventbrite, Superboletos y más.
+            </p>
+            <div className="mt-8 flex justify-center"><SearchBar /></div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const [tier1Events, thisWeekEvents, cities, genres] = await Promise.all([
     getTier1UpcomingEvents(8), getThisWeekEvents(6), getTier1Cities(), getTopGenres(12),
   ]);
