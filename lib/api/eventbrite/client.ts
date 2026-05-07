@@ -116,7 +116,8 @@ function parseEventsFromLd(html: string): EBEvent[] {
 
 export class EventbriteClient {
   // Token kept for compatibility; scraper doesn't need auth.
-  constructor(_token?: string) {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(token?: string) {}
 
   /** Fetch one page of music events for a city slug. */
   async scrapePage(citySlug: string, page: number): Promise<{ events: EBEvent[]; maxPage: number }> {
