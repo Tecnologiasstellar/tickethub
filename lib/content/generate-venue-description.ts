@@ -4,7 +4,11 @@ import { z } from "zod";
 import { query, queryOne } from "../db";
 import { SYSTEM_PROMPT, buildVenuePrompt, type VenueData } from "./prompts";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 const VenueDescriptionSchema = z.object({
   description_es: z.string().min(30).max(200),
@@ -54,7 +58,7 @@ export async function generateVenueDescription(venueId: string): Promise<string>
     address:  row.address,
   };
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [
