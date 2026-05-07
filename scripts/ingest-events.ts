@@ -35,9 +35,8 @@ async function main() {
   };
 
   // ─── Eventbrite ────────────────────────────────────────────────
-  const ebKey = process.env.EVENTBRITE_API_KEY;
-  if (ebKey) {
-    const client = new EventbriteClient(ebKey);
+  {
+    const client = new EventbriteClient();
     const stats = await runApiSource({
       tag: "eventbrite",
       events: client.allMexicoEvents(),
@@ -47,8 +46,6 @@ async function main() {
     });
     console.log(statsLine("eventbrite", stats));
     total = mergeStats(total, stats);
-  } else {
-    console.warn("[ingest-events] EVENTBRITE_API_KEY not set — skipping");
   }
 
   // ─── Songkick ──────────────────────────────────────────────────
