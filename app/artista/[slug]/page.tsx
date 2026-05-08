@@ -11,23 +11,26 @@ import {
   getArtistUpcomingEvents,
   getArtistSetlists,
   getSimilarArtists,
-  getArtistSlugs,
 } from "@/lib/queries/artista";
+import { getPublishedArtistSlugs } from "@/lib/queries/tier2";
 import { buildMusicGroupSchema, buildBreadcrumbSchema } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getArtistSlugs();
-  return slugs.map(slug => ({ slug }));
+  const slugs = await getPublishedArtistSlugs();
+  return slugs.map(row => ({ slug: row.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
-  if (!artist) return { title: "Artista no encontrado" };
+  if (!artist || artist.content_status !== "published") {
+    return { title: "Artista no encontrado" };
+  }
 
   const title = `${artist.name} en México — Fechas y boletos`;
   const description =
@@ -49,13 +52,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArtistaPage({ params }: Props) {
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
-  if (!artist) notFound();
+  if (!artist || artist.content_status !== "published") notFound();
 
   const [upcomingEvents, setlists, similarArtists] = await Promise.all([
     getArtistUpcomingEvents(artist.id),
     getArtistSetlists(artist.id, 3),
     getSimilarArtists(artist.id, artist.genres ?? [], 6),
   ]);
+  if (upcomingEvents.length === 0) notFound();
 
   const tourStops = [
     ...upcomingEvents.map(e => ({

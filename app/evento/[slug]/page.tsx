@@ -13,9 +13,9 @@ import {
   getEventBySlug,
   getEventSources,
   getArtistOtherDates,
-  getEventSlugs,
 } from "@/lib/queries/evento";
 import { getArtistSetlists } from "@/lib/queries/artista";
+import { getPublishedEventSlugs } from "@/lib/queries/tier2";
 import {
   buildEventSchema,
   buildFaqSchema,
@@ -25,18 +25,46 @@ import { buildEventFaqs } from "@/lib/seo/faq";
 import type { SourcePlatform } from "@/lib/types";
 
 export const revalidate = 1800;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
+type EventFaq = { question: string; answer: string };
+
+function isPublishedEvent(contentStatus: string): boolean {
+  return contentStatus === "published";
+}
+
+function normalizeFaqs(value: unknown): EventFaq[] {
+  let raw = value;
+  if (typeof value === "string") {
+    try {
+      raw = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (item): item is EventFaq =>
+      item != null &&
+      typeof item === "object" &&
+      typeof (item as EventFaq).question === "string" &&
+      typeof (item as EventFaq).answer === "string",
+  );
+}
 
 export async function generateStaticParams() {
-  const slugs = await getEventSlugs();
-  return slugs.map((slug) => ({ slug }));
+  const slugs = await getPublishedEventSlugs();
+  return slugs.map((row) => ({ slug: row.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
-  if (!event) return { title: "Evento no encontrado" };
+  if (!event || !isPublishedEvent(event.content_status)) {
+    return { title: "Evento no encontrado" };
+  }
 
   const title = event.seo_title ?? `${event.title} — Boletos y Precios`;
   const description =
@@ -58,14 +86,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventoPage({ params }: Props) {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
-  if (!event) notFound();
+  if (!event || !isPublishedEvent(event.content_status)) notFound();
+
+  const isTier2 = event.tier === "tier2";
+  const heroTitle = event.h1_title ?? event.title;
 
   const [sources, otherDates, setlists] = await Promise.all([
     getEventSources(event.id),
-    event.artist_id
+    event.artist_id && !isTier2
       ? getArtistOtherDates(event.artist_id, slug)
       : Promise.resolve([]),
-    event.artist_id
+    event.artist_id && !isTier2
       ? getArtistSetlists(event.artist_id, 1)
       : Promise.resolve([]),
   ]);
@@ -76,14 +107,18 @@ export default async function EventoPage({ params }: Props) {
   const bestPrice =
     availablePrices.length > 0 ? Math.min(...availablePrices) : undefined;
 
-  const faqs = buildEventFaqs({
-    title: event.title,
-    artistName: event.artist_name,
-    date: event.date,
-    venueName: event.venue_name,
-    cityName: event.city_name,
-    minPrice: bestPrice,
-  });
+  const generatedFaqs = normalizeFaqs(event.faq_json);
+  const faqs =
+    generatedFaqs.length > 0
+      ? generatedFaqs
+      : buildEventFaqs({
+          title: event.title,
+          artistName: event.artist_name,
+          date: event.date,
+          venueName: event.venue_name,
+          cityName: event.city_name,
+          minPrice: bestPrice,
+        });
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 
@@ -196,31 +231,34 @@ export default async function EventoPage({ params }: Props) {
 
         {/* Hero */}
         <EventHero
-          title={event.title}
+          variant={event.tier === "tier1" ? "tier1" : "tier2"}
+          title={heroTitle}
           artistName={event.artist_name ?? undefined}
           venueName={event.venue_name ?? ""}
           cityName={event.city_name ?? ""}
           date={event.date}
           imageUrl={event.image_url ?? undefined}
           minPrice={bestPrice}
-          primaryCtaHref="#precios"
+          primaryCtaHref={priceRows.length > 0 ? "#precios" : undefined}
           className="mb-6"
         />
 
         {/* Price comparison */}
-        <section
-          id="precios"
-          aria-labelledby="precios-heading"
-          className="mb-8"
-        >
-          <h2
-            id="precios-heading"
-            className="font-display mb-3 text-xl font-bold text-[var(--color-text)]"
+        {priceRows.length > 0 && (
+          <section
+            id="precios"
+            aria-labelledby="precios-heading"
+            className="mb-8"
           >
-            Compara precios
-          </h2>
-          <PriceComparisonTable rows={priceRows} />
-        </section>
+            <h2
+              id="precios-heading"
+              className="font-display mb-3 text-xl font-bold text-[var(--color-text)]"
+            >
+              Compara precios
+            </h2>
+            <PriceComparisonTable rows={priceRows} />
+          </section>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           {/* Main column */}

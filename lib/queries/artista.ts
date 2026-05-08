@@ -55,7 +55,11 @@ export async function getArtistUpcomingEvents(
     LEFT JOIN cities c ON e.city_id  = c.id
     WHERE e.artist_id = $1
       AND e.date > NOW()
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     ORDER BY e.date ASC
   `, [artistId]);
 }
@@ -85,9 +89,14 @@ export async function getSimilarArtists(
       COUNT(e.id)::int AS upcoming_count
     FROM artists a
     LEFT JOIN events e ON e.artist_id = a.id
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     WHERE a.id != $1
+      AND a.content_status = 'published'
       AND a.genres && $2
     GROUP BY a.id
     ORDER BY upcoming_count DESC, a.popularity DESC NULLS LAST
@@ -95,12 +104,3 @@ export async function getSimilarArtists(
   `, [artistId, genres, limit]);
 }
 
-export async function getArtistSlugs(): Promise<string[]> {
-  const rows = await query<{ slug: string }>(`
-    SELECT DISTINCT a.slug
-    FROM artists a
-    JOIN events e ON e.artist_id = a.id
-    WHERE e.status = 'active'
-  `);
-  return rows.map(r => r.slug);
-}

@@ -116,6 +116,8 @@ export interface EventRow {
   description_es: string | null;
   context_text: string | null;
   image_url: string | null;
+  h1_title: string | null;
+  faq_json: unknown;
   created_at: Date;
   updated_at: Date;
 }

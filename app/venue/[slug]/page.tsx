@@ -8,23 +8,26 @@ import {
   getVenueBySlug,
   getVenueUpcomingEvents,
   getVenuePastEvents,
-  getVenueSlugs,
 } from "@/lib/queries/venue";
+import { getPublishedVenueSlugs } from "@/lib/queries/tier2";
 import { buildPlaceSchema, buildBreadcrumbSchema } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getVenueSlugs();
-  return slugs.map(slug => ({ slug }));
+  const slugs = await getPublishedVenueSlugs();
+  return slugs.map(row => ({ slug: row.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const venue = await getVenueBySlug(slug);
-  if (!venue) return { title: "Venue no encontrado" };
+  if (!venue || venue.content_status !== "published") {
+    return { title: "Venue no encontrado" };
+  }
 
   const title = `${venue.name} — Eventos y boletos`;
   const description =
@@ -46,12 +49,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function VenuePage({ params }: Props) {
   const { slug } = await params;
   const venue = await getVenueBySlug(slug);
-  if (!venue) notFound();
+  if (!venue || venue.content_status !== "published") notFound();
 
   const [upcomingEvents, pastEvents] = await Promise.all([
     getVenueUpcomingEvents(venue.id),
     getVenuePastEvents(venue.id, 8),
   ]);
+  if (upcomingEvents.length === 0) notFound();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 

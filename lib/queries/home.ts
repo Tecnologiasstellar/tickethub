@@ -42,8 +42,12 @@ export async function getTier1UpcomingEvents(limit = 8): Promise<HomeEvent[]> {
     LEFT JOIN venues  v ON e.venue_id  = v.id
     LEFT JOIN cities  c ON e.city_id   = c.id
     WHERE e.tier = 'tier1'
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     ORDER BY e.date ASC
     LIMIT $1
   `, [limit]);
@@ -66,8 +70,12 @@ export async function getThisWeekEvents(limit = 6): Promise<HomeEvent[]> {
     LEFT JOIN artists a ON e.artist_id = a.id
     LEFT JOIN venues  v ON e.venue_id  = v.id
     LEFT JOIN cities  c ON e.city_id   = c.id
-    WHERE e.status = 'active'
+    WHERE e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     ORDER BY e.date ASC
     LIMIT $1
   `, [limit]);
@@ -80,10 +88,15 @@ export async function getTier1Cities(): Promise<HomeCity[]> {
       COUNT(e.id)::int AS event_count
     FROM cities c
     LEFT JOIN events e ON e.city_id = c.id
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     WHERE c.tier = 1
     GROUP BY c.id
+    HAVING COUNT(e.id) > 0
     ORDER BY event_count DESC
   `);
 }
@@ -93,9 +106,13 @@ export async function getTopGenres(limit = 12): Promise<string[]> {
     SELECT unnest(a.genres) AS genre, COUNT(*) AS cnt
     FROM artists a
     JOIN events e ON e.artist_id = a.id
-    WHERE e.status = 'active'
+    WHERE e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
       AND a.genres IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     GROUP BY genre
     ORDER BY cnt DESC
     LIMIT $1

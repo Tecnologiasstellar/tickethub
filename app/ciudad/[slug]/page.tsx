@@ -7,17 +7,18 @@ import {
   getCityBySlug,
   getCityUpcomingEvents,
   getCityVenues,
-  getCitySlugs,
 } from "@/lib/queries/ciudad";
+import { getPublishedCitySlugs } from "@/lib/queries/tier2";
 import { buildBreadcrumbSchema } from "@/lib/seo/jsonld";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getCitySlugs();
-  return slugs.map(slug => ({ slug }));
+  const slugs = await getPublishedCitySlugs();
+  return slugs.map(row => ({ slug: row.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -44,6 +45,7 @@ export default async function CiudadPage({ params }: Props) {
     getCityUpcomingEvents(city.id),
     getCityVenues(city.id),
   ]);
+  if (events.length === 0) notFound();
 
   const genreSet = new Set<string>();
   for (const ev of events) {

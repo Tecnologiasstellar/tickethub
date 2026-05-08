@@ -48,8 +48,12 @@ export async function getCityUpcomingEvents(cityId: string): Promise<CityEvent[]
     LEFT JOIN artists a ON e.artist_id = a.id
     LEFT JOIN venues  v ON e.venue_id  = v.id
     WHERE e.city_id = $1
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     ORDER BY e.date ASC
   `, [cityId]);
 }
@@ -61,20 +65,15 @@ export async function getCityVenues(cityId: string): Promise<CityVenue[]> {
       COUNT(e.id)::int AS upcoming_count
     FROM venues v
     LEFT JOIN events e ON e.venue_id = v.id
-      AND e.status = 'active'
+      AND e.status IN ('active', 'sold_out')
+      AND e.content_status = 'published'
       AND e.date > NOW()
+      AND EXISTS (
+        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
+      )
     WHERE v.city_id = $1
     GROUP BY v.id
     ORDER BY upcoming_count DESC, v.capacity DESC NULLS LAST
   `, [cityId]);
 }
 
-export async function getCitySlugs(): Promise<string[]> {
-  const rows = await query<{ slug: string }>(`
-    SELECT DISTINCT c.slug
-    FROM cities c
-    JOIN events e ON e.city_id = c.id
-    WHERE e.status = 'active'
-  `);
-  return rows.map(r => r.slug);
-}
