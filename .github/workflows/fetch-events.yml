@@ -1,0 +1,28 @@
+name: Fetch Events (API Sources)
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:          # manual trigger for testing
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/fetch-events
+        run: |
+          STATUS=$(curl -s -o /tmp/fetch-events.json -w "%{http_code}" \
+            -X POST "${{ secrets.VERCEL_URL }}/api/cron/fetch-events" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "── /api/cron/fetch-events → HTTP $STATUS ──"
+          cat /tmp/fetch-events.json || true
+          echo
+          echo "## Cron run summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Endpoint | HTTP |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| /api/cron/fetch-events | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STATUS" != "200" ]; then
+            echo "Endpoint did not return 200"
+            exit 1
+          fi
