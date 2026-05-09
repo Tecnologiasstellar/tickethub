@@ -20,6 +20,7 @@ export interface EBVenue {
     address_1?: string;
     localized_address_display?: string;
   };
+  geo?: { latitude: string; longitude: string };
 }
 
 export interface EBTicketAvailability {

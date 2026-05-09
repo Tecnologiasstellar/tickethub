@@ -8,7 +8,11 @@ import {
   type EventData,
 } from "./prompts";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 const EventContentSchema = z.object({
   seo_title:       z.string().min(10).max(60),
@@ -99,7 +103,7 @@ export async function generateEventContext(eventId: string): Promise<EventConten
     currency:   row.currency,
   };
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [

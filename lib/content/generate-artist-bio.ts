@@ -4,7 +4,11 @@ import { z } from "zod";
 import { query, queryOne } from "../db";
 import { SYSTEM_PROMPT, buildArtistPrompt, type ArtistData } from "./prompts";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 const ArtistBioSchema = z.object({
   bio_es: z.string().min(50).max(300),
@@ -59,7 +63,7 @@ export async function generateArtistBio(artistId: string): Promise<string> {
     upcomingEventCount: Number(row.event_count),
   };
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [

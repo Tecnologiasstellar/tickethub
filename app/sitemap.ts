@@ -11,7 +11,14 @@ import {
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // DATABASE_URL is absent during preview/CI builds — return minimal sitemap
+  if (!process.env.DATABASE_URL) {
+    return [{ url: siteUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1 }];
+  }
+
   const [events, artists, cities, venues, cityMonths, genres] =
     await Promise.all([
       getSitemapEventRows(),

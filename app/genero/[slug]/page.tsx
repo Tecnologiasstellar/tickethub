@@ -13,6 +13,7 @@ export const dynamicParams = true;
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
+  if (!process.env.DATABASE_URL) return [];
   const genres = await getAllActiveGenres();
   return genres.map((g) => ({ slug: g.slug }));
 }

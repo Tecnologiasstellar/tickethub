@@ -19,6 +19,7 @@ function mesLabel(mes: string): string {
 }
 
 export async function generateStaticParams() {
+  if (!process.env.DATABASE_URL) return [];
   const combos = await getAllCityMonthCombos();
   return combos.map((c) => ({ slug: c.citySlug, mes: c.mes }));
 }
