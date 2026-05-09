@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS artists (
   name            TEXT NOT NULL,
   slug            TEXT NOT NULL UNIQUE,
   spotify_id      TEXT UNIQUE,
+  mbid            TEXT UNIQUE,
   image_url       TEXT,
   genres          TEXT[],
   popularity      INTEGER,
