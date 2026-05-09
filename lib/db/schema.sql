@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS events (
   h1_title        TEXT,
   faq_json        JSONB,
   image_url       TEXT,
+  h1_title        TEXT,
+  faq_json        JSONB,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
