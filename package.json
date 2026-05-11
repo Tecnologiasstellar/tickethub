@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "preflight": "dotenv -e .env.local -- tsx scripts/preflight.ts",
     "db:init": "dotenv -e .env.local -- tsx scripts/init-db.ts",
     "db:seed-cities": "dotenv -e .env.local -- tsx scripts/seed-cities.ts",
     "db:seed-hero": "dotenv -e .env.local -- tsx scripts/seed-hero-events.ts",
