@@ -1,5 +1,6 @@
 import slugify from "slugify";
 import { query, queryOne } from "../lib/db";
+import { buildAffiliateUrl } from "../lib/affiliate";
 import type { SourcePlatform } from "../lib/types";
 
 interface HeroSource {
@@ -261,6 +262,7 @@ async function upsertSource(
   eventId: string,
   s: HeroSource
 ): Promise<{ id: string; created: boolean }> {
+  const affiliateUrl = s.affiliateUrl ?? buildAffiliateUrl(s.url, s.platform);
   const row = await queryOne<{ id: string; created: boolean }>(
     `INSERT INTO event_sources
        (event_id, platform, source_event_id, url, affiliate_url, is_resale)
@@ -268,7 +270,7 @@ async function upsertSource(
      ON CONFLICT (platform, source_event_id) DO UPDATE
        SET event_id      = EXCLUDED.event_id,
            url           = EXCLUDED.url,
-           affiliate_url = COALESCE(EXCLUDED.affiliate_url, event_sources.affiliate_url),
+           affiliate_url = EXCLUDED.affiliate_url,
            is_resale     = EXCLUDED.is_resale
      RETURNING id, (xmax = 0) AS created`,
     [
@@ -276,7 +278,7 @@ async function upsertSource(
       s.platform,
       s.sourceEventId,
       s.url,
-      s.affiliateUrl ?? null,
+      affiliateUrl,
       s.isResale ?? false,
     ]
   );

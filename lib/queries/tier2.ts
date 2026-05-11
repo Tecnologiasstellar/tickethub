@@ -140,7 +140,8 @@ export async function getCityMonthEvents(
   return query<Tier2ListingEvent>(
     `
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name AS artist_name, a.slug AS artist_slug,
       v.name AS venue_name, v.slug AS venue_slug,
       c.name AS city_name, c.slug AS city_slug,
@@ -226,7 +227,8 @@ export async function getGenreEventsByName(
   return query<Tier2ListingEvent>(
     `
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name AS artist_name, a.slug AS artist_slug,
       v.name AS venue_name, v.slug AS venue_slug,
       c.name AS city_name, c.slug AS city_slug,

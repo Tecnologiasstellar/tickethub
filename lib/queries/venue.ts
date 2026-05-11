@@ -44,7 +44,8 @@ export async function getVenueBySlug(slug: string): Promise<VenuePageVenue | nul
 export async function getVenueUpcomingEvents(venueId: string): Promise<VenueEvent[]> {
   return query<VenueEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name AS artist_name, a.slug AS artist_slug,
       (SELECT MIN(ps.min_price)
        FROM event_sources es
@@ -71,7 +72,8 @@ export async function getVenuePastEvents(
 ): Promise<VenueEvent[]> {
   return query<VenueEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name AS artist_name, a.slug AS artist_slug,
       (SELECT MIN(ps.min_price)
        FROM event_sources es

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EventHero } from "@/components/EventHero";
+import { EventCard } from "@/components/EventCard";
 import { PriceComparisonTable } from "@/components/PriceComparisonTable";
 import { StickyMobileCTA } from "@/components/StickyMobileCTA";
 import { SetlistPreview } from "@/components/SetlistPreview";
@@ -234,14 +235,40 @@ export default async function EventoPage({ params }: Props) {
           variant={event.tier === "tier1" ? "tier1" : "tier2"}
           title={heroTitle}
           artistName={event.artist_name ?? undefined}
+          artistSlug={event.artist_slug ?? undefined}
           venueName={event.venue_name ?? ""}
+          venueSlug={event.venue_slug ?? undefined}
           cityName={event.city_name ?? ""}
+          citySlug={event.city_slug ?? undefined}
           date={event.date}
-          imageUrl={event.image_url ?? undefined}
+          imageUrl={event.artist_image_url ?? event.image_url ?? undefined}
           minPrice={bestPrice}
           primaryCtaHref={priceRows.length > 0 ? "#precios" : undefined}
+          primaryCtaLabel="Ver precios →"
           className="mb-6"
         />
+
+        {/* Spotify embed */}
+        {event.artist_spotify_id && event.artist_name ? (
+          <section aria-labelledby="spotify-heading" className="mb-8">
+            <h2
+              id="spotify-heading"
+              className="font-display mb-3 text-xl font-bold text-[var(--color-text)]"
+            >
+              Escucha a {event.artist_name}
+            </h2>
+            <iframe
+              title={`Spotify · ${event.artist_name}`}
+              src={`https://open.spotify.com/embed/artist/${event.artist_spotify_id}?utm_source=generator`}
+              width="100%"
+              height={352}
+              frameBorder="0"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              className="rounded-[var(--radius-lg)]"
+            />
+          </section>
+        ) : null}
 
         {/* Price comparison */}
         {priceRows.length > 0 && (
@@ -350,6 +377,37 @@ export default async function EventoPage({ params }: Props) {
             )}
           </aside>
         </div>
+
+        {/* Related events */}
+        {event.artist_name && otherDates.length > 0 ? (
+          <section
+            aria-labelledby="related-events-heading"
+            className="mt-12"
+          >
+            <h2
+              id="related-events-heading"
+              className="font-display mb-4 text-xl font-bold text-[var(--color-text)]"
+            >
+              Más conciertos de {event.artist_name}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {otherDates.slice(0, 3).map((d) => (
+                <EventCard
+                  key={d.id}
+                  href={`/evento/${d.slug}`}
+                  title={d.title}
+                  artistName={event.artist_name ?? undefined}
+                  venueName={d.venue_name ?? "Por confirmar"}
+                  cityName={d.city_name ?? ""}
+                  date={d.date}
+                  imageUrl={d.image_url ?? event.artist_image_url ?? undefined}
+                  minPrice={d.min_price ?? undefined}
+                  sourceCount={d.source_count}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {priceRows.length > 0 && (

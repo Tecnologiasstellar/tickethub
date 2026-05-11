@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from "react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
 import { cn } from "@/lib/utils/cn";
@@ -71,12 +72,12 @@ export function EventCard({
           aria-hidden={!imageUrl}
         >
           {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote image hosts not yet configured in next.config
-            <img
+            <Image
               src={imageUrl}
               alt=""
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-[var(--duration-slow)] group-hover:scale-[1.03]"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform duration-[var(--duration-slow)] group-hover:scale-[1.03]"
             />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-[var(--color-surface-2)] to-[var(--color-surface-3)]" />

@@ -34,7 +34,8 @@ export async function getCityBySlug(slug: string): Promise<CityRow | null> {
 export async function getCityUpcomingEvents(cityId: string): Promise<CityEvent[]> {
   return query<CityEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name   AS artist_name, a.slug   AS artist_slug,
       a.genres AS artist_genres,
       v.name   AS venue_name,  v.slug   AS venue_slug,

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
 import { SetlistPreview } from "@/components/SetlistPreview";
@@ -133,49 +134,85 @@ export default async function ArtistaPage({ params }: Props) {
         </nav>
 
         {/* Artist header */}
-        <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-start">
-          {artist.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={artist.image_url}
-              alt={artist.name}
-              className="h-36 w-36 shrink-0 rounded-full object-cover ring-2 ring-[var(--color-border)]"
-            />
-          ) : (
+        {artist.image_url ? (
+          <header className="relative mb-10 overflow-hidden rounded-[var(--radius-xl)] ring-1 ring-[var(--color-border)]">
+            <div className="relative aspect-[16/7] w-full">
+              <Image
+                src={artist.image_url}
+                alt={artist.name}
+                fill
+                priority
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-black/60" aria-hidden />
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
+                <h1 className="font-display text-4xl font-bold text-white drop-shadow-md md:text-6xl">
+                  {artist.name}
+                </h1>
+                {artist.genres?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {artist.genres.map(g => (
+                      <Badge key={g} tone="primary" variant="soft">
+                        {g}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
+                {artist.popularity != null && (
+                  <p className="mt-2 text-sm text-white/80">
+                    Popularidad:{" "}
+                    <span className="font-semibold text-white">
+                      {artist.popularity}/100
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+            {artist.bio_es && (
+              <div className="bg-[var(--color-surface)] p-6 sm:p-8">
+                <p className="max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
+                  {artist.bio_es}
+                </p>
+              </div>
+            )}
+          </header>
+        ) : (
+          <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex h-36 w-36 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] ring-2 ring-[var(--color-border)]">
               <span className="font-display text-4xl font-bold text-[var(--color-primary)]">
                 {artist.name.charAt(0).toUpperCase()}
               </span>
             </div>
-          )}
-          <div className="min-w-0">
-            <h1 className="font-display text-4xl font-bold text-[var(--color-text)] md:text-5xl">
-              {artist.name}
-            </h1>
-            {artist.genres?.length ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {artist.genres.map(g => (
-                  <Badge key={g} tone="primary" variant="soft">
-                    {g}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-            {artist.popularity != null && (
-              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                Popularidad:{" "}
-                <span className="font-semibold text-[var(--color-text)]">
-                  {artist.popularity}/100
-                </span>
-              </p>
-            )}
-            {artist.bio_es && (
-              <p className="mt-4 max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
-                {artist.bio_es}
-              </p>
-            )}
-          </div>
-        </header>
+            <div className="min-w-0">
+              <h1 className="font-display text-4xl font-bold text-[var(--color-text)] md:text-5xl">
+                {artist.name}
+              </h1>
+              {artist.genres?.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {artist.genres.map(g => (
+                    <Badge key={g} tone="primary" variant="soft">
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+              {artist.popularity != null && (
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                  Popularidad:{" "}
+                  <span className="font-semibold text-[var(--color-text)]">
+                    {artist.popularity}/100
+                  </span>
+                </p>
+              )}
+              {artist.bio_es && (
+                <p className="mt-4 max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
+                  {artist.bio_es}
+                </p>
+              )}
+            </div>
+          </header>
+        )}
 
         <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
           {/* Main column */}
@@ -197,6 +234,7 @@ export default async function ArtistaPage({ params }: Props) {
                       venueName={ev.venue_name ?? ""}
                       cityName={ev.city_name ?? ""}
                       date={ev.date}
+                      imageUrl={artist.image_url ?? undefined}
                       minPrice={ev.min_price ?? undefined}
                       sourceCount={ev.source_count}
                     />

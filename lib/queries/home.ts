@@ -27,7 +27,8 @@ export interface HomeCity {
 export async function getTier1UpcomingEvents(limit = 8): Promise<HomeEvent[]> {
   return query<HomeEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name  AS artist_name, a.slug AS artist_slug,
       v.name  AS venue_name,
       c.name  AS city_name,  c.slug AS city_slug,
@@ -56,7 +57,8 @@ export async function getTier1UpcomingEvents(limit = 8): Promise<HomeEvent[]> {
 export async function getThisWeekEvents(limit = 6): Promise<HomeEvent[]> {
   return query<HomeEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.image_url,
+      e.id, e.slug, e.title, e.date,
+      COALESCE(e.image_url, a.image_url) AS image_url,
       a.name  AS artist_name, a.slug AS artist_slug,
       v.name  AS venue_name,
       c.name  AS city_name,  c.slug AS city_slug,

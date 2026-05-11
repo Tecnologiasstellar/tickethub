@@ -8,8 +8,11 @@ import { formatDateTime, formatPrice } from "@/lib/utils/format";
 export interface EventHeroProps {
   title: string;
   artistName?: string;
+  artistSlug?: string;
   venueName: string;
+  venueSlug?: string;
   cityName: string;
+  citySlug?: string;
   date: Date | string;
   imageUrl?: string;
   minPrice?: number;
@@ -25,8 +28,11 @@ export interface EventHeroProps {
 export function EventHero({
   title,
   artistName,
+  artistSlug,
   venueName,
+  venueSlug,
   cityName,
+  citySlug,
   date,
   imageUrl,
   minPrice,
@@ -39,6 +45,31 @@ export function EventHero({
   variant = "tier1",
 }: EventHeroProps) {
   const isTier2 = variant === "tier2";
+  const artistBadge = artistName ? (
+    <Badge tone="primary" variant="soft">
+      {artistSlug ? (
+        <a href={`/artista/${artistSlug}`} className="hover:underline">
+          {artistName}
+        </a>
+      ) : (
+        artistName
+      )}
+    </Badge>
+  ) : null;
+  const venueDisplay = venueSlug ? (
+    <a href={`/venue/${venueSlug}`} className="hover:text-[var(--color-primary)] hover:underline">
+      {venueName}
+    </a>
+  ) : (
+    venueName
+  );
+  const cityDisplay = citySlug ? (
+    <a href={`/ciudad/${citySlug}`} className="hover:text-[var(--color-primary)] hover:underline">
+      {cityName}
+    </a>
+  ) : (
+    cityName
+  );
 
   return (
     <section
@@ -69,11 +100,7 @@ export function EventHero({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            {artistName ? (
-              <Badge tone="primary" variant="soft">
-                {artistName}
-              </Badge>
-            ) : null}
+            {artistBadge}
             {badges}
           </div>
 
@@ -87,7 +114,7 @@ export function EventHero({
           </h1>
 
           <p className="mt-3 text-[var(--color-text-muted)] md:text-lg">
-            {venueName} · {cityName}
+            {venueDisplay} · {cityDisplay}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             {formatDateTime(date)}

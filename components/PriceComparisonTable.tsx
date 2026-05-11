@@ -155,15 +155,26 @@ export function PriceComparisonTable({
                       )}
                     </td>
                     <td className="px-5 py-4 text-right align-middle">
-                      <Button
-                        href={row.url}
-                        size="sm"
-                        variant={isCheapest ? "primary" : "secondary"}
-                        rel="noopener nofollow sponsored"
-                        target="_blank"
-                      >
-                        Comprar
-                      </Button>
+                      {row.isSoldOut ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled
+                          aria-label="No disponible — agotado"
+                        >
+                          Agotado
+                        </Button>
+                      ) : (
+                        <Button
+                          href={row.url}
+                          size="sm"
+                          variant={isCheapest ? "primary" : "secondary"}
+                          rel="noopener nofollow sponsored"
+                          target="_blank"
+                        >
+                          Comprar
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -233,15 +244,21 @@ export function PriceComparisonTable({
                       )}
                     </div>
                   </div>
-                  <Button
-                    href={row.url}
-                    size="sm"
-                    variant={isCheapest ? "primary" : "secondary"}
-                    rel="noopener nofollow sponsored"
-                    target="_blank"
-                  >
-                    Ir
-                  </Button>
+                  {row.isSoldOut ? (
+                    <Button size="sm" variant="secondary" disabled>
+                      Agotado
+                    </Button>
+                  ) : (
+                    <Button
+                      href={row.url}
+                      size="sm"
+                      variant={isCheapest ? "primary" : "secondary"}
+                      rel="noopener nofollow sponsored"
+                      target="_blank"
+                    >
+                      Ir
+                    </Button>
+                  )}
                 </div>
               </li>
             );

@@ -1,4 +1,5 @@
 import { queryOne } from "../db";
+import { buildAffiliateUrl } from "../affiliate";
 import type { NormalizedEvent } from "../types";
 import {
   isTributeOrCover,
@@ -105,6 +106,8 @@ async function upsertEventSource(
   eventId: string,
   n: NormalizedEvent
 ): Promise<string> {
+  const affiliateUrl =
+    n.affiliateUrl ?? buildAffiliateUrl(n.url, n.sourcePlatform);
   const row = await queryOne<{ id: string }>(
     `INSERT INTO event_sources
        (event_id, platform, source_event_id, url, affiliate_url, is_resale)
@@ -112,7 +115,7 @@ async function upsertEventSource(
      ON CONFLICT (platform, source_event_id) DO UPDATE
        SET event_id      = EXCLUDED.event_id,
            url           = EXCLUDED.url,
-           affiliate_url = COALESCE(EXCLUDED.affiliate_url, event_sources.affiliate_url),
+           affiliate_url = EXCLUDED.affiliate_url,
            is_resale     = EXCLUDED.is_resale
      RETURNING id`,
     [
@@ -120,7 +123,7 @@ async function upsertEventSource(
       n.sourcePlatform,
       n.sourceId,
       n.url,
-      n.affiliateUrl ?? null,
+      affiliateUrl,
       n.isResale ?? false,
     ]
   );

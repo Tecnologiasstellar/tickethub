@@ -1,5 +1,6 @@
 import type { TMEvent } from "./types";
 import type { NormalizedEvent } from "../../types";
+import { buildAffiliateUrl } from "../../affiliate";
 
 const CITY_MAP: Record<string, string> = {
   "Mexico City": "Ciudad de Mexico",
@@ -48,6 +49,7 @@ export function tmEventToNormalized(ev: TMEvent): NormalizedEvent | null {
     cityName,
     date,
     url: ev.url,
+    affiliateUrl: buildAffiliateUrl(ev.url, "ticketmaster"),
     minPrice,
     maxPrice,
     currency,
