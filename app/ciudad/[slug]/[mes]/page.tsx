@@ -5,7 +5,7 @@ import { EventCard } from "@/components/EventCard";
 import { getCityBySlug } from "@/lib/queries/ciudad";
 import {
   getCityMonthEvents,
-  getPublishedCityMonthCombos,
+  getAllCityMonthCombos,
 } from "@/lib/queries/tier2";
 import { buildBreadcrumbSchema } from "@/lib/seo/jsonld";
 
@@ -36,8 +36,8 @@ function mesLabel(mes: string): string {
 }
 
 export async function generateStaticParams() {
-  const combos = await getPublishedCityMonthCombos();
-  return combos.map((combo) => ({ slug: combo.slug, mes: combo.mes }));
+  const combos = await getAllCityMonthCombos();
+  return combos.map((combo) => ({ slug: combo.citySlug, mes: combo.mes }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

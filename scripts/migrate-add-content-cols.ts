@@ -1,18 +1,16 @@
+// scripts/migrate-add-content-cols.ts
 import { query } from "../lib/db";
 
 async function main() {
-  console.log("[migrate] adding h1_title and faq_json columns to events...");
-
   await query(`
     ALTER TABLE events
-      ADD COLUMN IF NOT EXISTS h1_title  TEXT,
-      ADD COLUMN IF NOT EXISTS faq_json  JSONB
+      ADD COLUMN IF NOT EXISTS h1_title TEXT,
+      ADD COLUMN IF NOT EXISTS faq_json JSONB;
   `);
-
-  console.log("[migrate] done.");
+  console.log("[migrate] added h1_title, faq_json to events — done");
 }
 
 main().catch((err) => {
-  console.error("[migrate] failed:", err);
+  console.error("[migrate] fatal:", err);
   process.exit(1);
 });

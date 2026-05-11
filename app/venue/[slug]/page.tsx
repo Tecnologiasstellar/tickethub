@@ -1,38 +1,34 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
-import { VenueMap } from "@/components/VenueMap";
 import { DataPill } from "@/components/ui/DataPill";
 import {
   getVenueBySlug,
   getVenueUpcomingEvents,
   getVenuePastEvents,
 } from "@/lib/queries/venue";
-import { getPublishedVenueSlugs } from "@/lib/queries/tier2";
-import { buildPlaceSchema, buildBreadcrumbSchema } from "@/lib/seo/jsonld";
+import { getAllVenueSlugsWithEvents } from "@/lib/queries/tier2";
+import { buildBreadcrumbSchema, buildPlaceSchema } from "@/lib/seo/jsonld";
 
-export const revalidate = 3600;
+export const revalidate = 1800;
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getPublishedVenueSlugs();
-  return slugs.map(row => ({ slug: row.slug }));
+  if (!process.env.DATABASE_URL) return [];
+  const venues = await getAllVenueSlugsWithEvents();
+  return venues.map((v) => ({ slug: v.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const venue = await getVenueBySlug(slug);
-  if (!venue || venue.content_status !== "published") {
-    return { title: "Venue no encontrado" };
-  }
+  if (!venue) return { title: "Venue no encontrado" };
 
-  const title = `${venue.name} — Eventos y boletos`;
-  const description =
-    venue.description_es ??
-    `Próximos eventos en ${venue.name}, ${venue.city_name ?? "México"}. Compara precios de boletos.`;
+  const title = `${venue.name} — Conciertos y Boletos`;
+  const description = `Próximos conciertos en ${venue.name}${venue.city_name ? ` en ${venue.city_name}` : ""}. Compara precios de boletos entre todas las plataformas.`;
 
   return {
     title,
@@ -49,13 +45,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function VenuePage({ params }: Props) {
   const { slug } = await params;
   const venue = await getVenueBySlug(slug);
-  if (!venue || venue.content_status !== "published") notFound();
+  if (!venue) notFound();
 
   const [upcomingEvents, pastEvents] = await Promise.all([
     getVenueUpcomingEvents(venue.id),
-    getVenuePastEvents(venue.id, 8),
+    getVenuePastEvents(venue.id),
   ]);
-  if (upcomingEvents.length === 0) notFound();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 
@@ -64,7 +59,7 @@ export default async function VenuePage({ params }: Props) {
       name: venue.name,
       slug: venue.slug,
       address: venue.address,
-      cityName: venue.city_name ?? "México",
+      cityName: venue.city_name ?? "",
       capacity: venue.capacity,
       lat: venue.lat,
       lng: venue.lng,
@@ -72,16 +67,19 @@ export default async function VenuePage({ params }: Props) {
     },
     siteUrl,
   );
-  const breadcrumbSchema = buildBreadcrumbSchema(
-    [
-      { name: "Inicio", href: "/" },
-      ...(venue.city_slug
-        ? [{ name: venue.city_name ?? "Ciudad", href: `/ciudad/${venue.city_slug}` }]
-        : []),
-      { name: venue.name, href: `/venue/${slug}` },
-    ],
-    siteUrl,
-  );
+
+  const breadcrumbItems: Array<{ name: string; href: string }> = [
+    { name: "Inicio", href: "/" },
+  ];
+  if (venue.city_name && venue.city_slug) {
+    breadcrumbItems.push({
+      name: venue.city_name,
+      href: `/ciudad/${venue.city_slug}`,
+    });
+  }
+  breadcrumbItems.push({ name: venue.name, href: `/venue/${slug}` });
+
+  const breadcrumbSchema = buildBreadcrumbSchema(breadcrumbItems, siteUrl);
 
   return (
     <>
@@ -94,14 +92,16 @@ export default async function VenuePage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      <div className="mx-auto max-w-[var(--container-max)] px-4 py-8">
+      <main className="mx-auto max-w-[var(--container-max)] px-4 py-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="mb-4">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <li>
-              <Link href="/" className="hover:text-[var(--color-primary)]">Inicio</Link>
+              <Link href="/" className="hover:text-[var(--color-primary)]">
+                Inicio
+              </Link>
             </li>
-            {venue.city_slug && (
+            {venue.city_name && venue.city_slug && (
               <>
                 <li aria-hidden>›</li>
                 <li>
@@ -115,143 +115,119 @@ export default async function VenuePage({ params }: Props) {
               </>
             )}
             <li aria-hidden>›</li>
-            <li aria-current="page" className="truncate text-[var(--color-text)]">
+            <li className="text-[var(--color-text)]" aria-current="page">
               {venue.name}
             </li>
           </ol>
         </nav>
 
-        {/* Venue hero image */}
-        {venue.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={venue.image_url}
-            alt={venue.name}
-            className="mb-6 h-52 w-full rounded-[var(--radius-xl)] object-cover"
-          />
+        {/* Venue Header */}
+        <section className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          {venue.image_url && (
+            <img
+              src={venue.image_url}
+              alt={venue.name}
+              width={120}
+              height={120}
+              className="h-28 w-28 shrink-0 rounded-[var(--radius-xl)] object-cover border border-[var(--color-border)]"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-3xl font-bold text-[var(--color-text)] mb-2">
+              {venue.name}
+            </h1>
+
+            {(venue.city_name || venue.address) && (
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                {[venue.address, venue.city_name].filter(Boolean).join(", ")}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3 mb-4">
+              {venue.capacity && (
+                <DataPill
+                  label="Capacidad"
+                  value={venue.capacity.toLocaleString("es-MX")}
+                />
+              )}
+              <DataPill
+                label="Próximos eventos"
+                value={upcomingEvents.length}
+              />
+            </div>
+
+            {venue.description_es && (
+              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-2xl">
+                {venue.description_es}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* Google Maps link */}
+        {venue.lat && venue.lng && (
+          <div className="mt-6 mb-8">
+            <a
+              href={`https://maps.google.com/?q=${venue.lat},${venue.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-primary)] hover:underline text-sm"
+            >
+              Ver en Google Maps
+            </a>
+          </div>
         )}
 
-        <header className="mb-8">
-          <h1 className="font-display text-4xl font-bold text-[var(--color-text)] md:text-5xl">
-            {venue.name}
-          </h1>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {venue.city_name && (
-              <DataPill
-                label="Ciudad"
-                value={
-                  venue.city_slug ? (
-                    <a
-                      href={`/ciudad/${venue.city_slug}`}
-                      className="hover:text-[var(--color-primary)]"
-                    >
-                      {venue.city_name}
-                    </a>
-                  ) : (
-                    venue.city_name
-                  )
-                }
-              />
-            )}
-            {venue.capacity && (
-              <DataPill
-                label="Capacidad"
-                value={venue.capacity.toLocaleString("es-MX")}
-              />
-            )}
-            {venue.address && (
-              <DataPill label="Dirección" value={venue.address} />
-            )}
-          </div>
-          {venue.description_es && (
-            <p className="mt-4 max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
-              {venue.description_es}
-            </p>
-          )}
-        </header>
+        {/* Upcoming Events */}
+        {upcomingEvents.length > 0 && (
+          <section className="mb-8">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
+              Próximos conciertos
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {upcomingEvents.map((e) => (
+                <EventCard
+                  key={e.id}
+                  href={`/evento/${e.slug}`}
+                  title={e.title}
+                  artistName={e.artist_name ?? undefined}
+                  venueName={venue.name}
+                  cityName={venue.city_name ?? ""}
+                  date={e.date}
+                  imageUrl={e.image_url ?? undefined}
+                  minPrice={e.min_price ?? undefined}
+                  sourceCount={e.source_count}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
-          {/* Upcoming events */}
-          <div className="space-y-10">
-            <section aria-labelledby="upcoming-heading">
-              <h2
-                id="upcoming-heading"
-                className="font-display mb-5 text-2xl font-bold text-[var(--color-text)]"
-              >
-                Próximos eventos
-              </h2>
-              {upcomingEvents.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {upcomingEvents.map(ev => (
-                    <EventCard
-                      key={ev.id}
-                      href={`/evento/${ev.slug}`}
-                      title={ev.title}
-                      artistName={ev.artist_name ?? undefined}
-                      venueName={venue.name}
-                      cityName={venue.city_name ?? ""}
-                      date={ev.date}
-                      imageUrl={ev.image_url ?? undefined}
-                      minPrice={ev.min_price ?? undefined}
-                      sourceCount={ev.source_count}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[var(--color-text-muted)]">
-                  No hay eventos próximos en este venue.
-                </p>
-              )}
-            </section>
-
-            {/* Past events — collapsible */}
-            {pastEvents.length > 0 && (
-              <section>
-                <details className="group">
-                  <summary className="flex cursor-pointer list-none items-center gap-3">
-                    <h2 className="font-display text-2xl font-bold text-[var(--color-text)]">
-                      Eventos pasados
-                    </h2>
-                    <span className="text-xs text-[var(--color-text-muted)] transition-transform group-open:rotate-180">
-                      ▾
-                    </span>
-                  </summary>
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                    {pastEvents.map(ev => (
-                      <EventCard
-                        key={ev.id}
-                        href={`/evento/${ev.slug}`}
-                        title={ev.title}
-                        artistName={ev.artist_name ?? undefined}
-                        venueName={venue.name}
-                        cityName={venue.city_name ?? ""}
-                        date={ev.date}
-                        imageUrl={ev.image_url ?? undefined}
-                        availability="past"
-                      />
-                    ))}
-                  </div>
-                </details>
-              </section>
-            )}
-          </div>
-
-          {/* Map sidebar */}
-          {venue.lat != null && venue.lng != null && (
-            <aside>
-              <h2 className="font-display mb-3 text-lg font-bold text-[var(--color-text)]">
-                Ubicación
-              </h2>
-              <VenueMap
-                lat={venue.lat}
-                lng={venue.lng}
-                name={venue.name}
-                address={venue.address}
-              />
-            </aside>
-          )}
-        </div>
-      </div>
+        {/* Past Events */}
+        {pastEvents.length > 0 && (
+          <section className="mb-8">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
+              Eventos anteriores
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pastEvents.map((e) => (
+                <EventCard
+                  key={e.id}
+                  href={`/evento/${e.slug}`}
+                  title={e.title}
+                  artistName={e.artist_name ?? undefined}
+                  venueName={venue.name}
+                  cityName={venue.city_name ?? ""}
+                  date={e.date}
+                  imageUrl={e.image_url ?? undefined}
+                  minPrice={e.min_price ?? undefined}
+                  sourceCount={e.source_count}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
     </>
   );
 }

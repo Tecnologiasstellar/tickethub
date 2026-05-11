@@ -22,6 +22,7 @@ export interface EventHeroProps {
   secondaryAction?: ReactNode;
   badges?: ReactNode;
   className?: string;
+  /** tier1 = full hero with background image; tier2 = compact, no bg image */
   variant?: "tier1" | "tier2";
 }
 
@@ -121,15 +122,8 @@ export function EventHero({
           </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <DataPill
-              label="Fecha"
-              value={formatDateTime(date)}
-            />
-            <DataPill
-              label="Ciudad"
-              value={cityName}
-              hint={venueName}
-            />
+            <DataPill label="Fecha" value={formatDateTime(date)} />
+            <DataPill label="Ciudad" value={cityName} hint={venueName} />
             {minPrice !== undefined ? (
               <DataPill
                 label="Desde"

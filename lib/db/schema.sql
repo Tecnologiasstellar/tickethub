@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS events (
   seo_description TEXT,
   description_es  TEXT,
   context_text    TEXT,
+  h1_title        TEXT,
+  faq_json        JSONB,
   image_url       TEXT,
   h1_title        TEXT,
   faq_json        JSONB,

@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { EventHero } from "@/components/EventHero";
 import { EventCard } from "@/components/EventCard";
 import { PriceComparisonTable } from "@/components/PriceComparisonTable";
@@ -16,7 +16,7 @@ import {
   getArtistOtherDates,
 } from "@/lib/queries/evento";
 import { getArtistSetlists } from "@/lib/queries/artista";
-import { getPublishedEventSlugs } from "@/lib/queries/tier2";
+import { getAllPublishedEventSlugs } from "@/lib/queries/tier2";
 import {
   buildEventSchema,
   buildFaqSchema,
@@ -29,43 +29,17 @@ export const revalidate = 1800;
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
-type EventFaq = { question: string; answer: string };
-
-function isPublishedEvent(contentStatus: string): boolean {
-  return contentStatus === "published";
-}
-
-function normalizeFaqs(value: unknown): EventFaq[] {
-  let raw = value;
-  if (typeof value === "string") {
-    try {
-      raw = JSON.parse(value);
-    } catch {
-      return [];
-    }
-  }
-
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (item): item is EventFaq =>
-      item != null &&
-      typeof item === "object" &&
-      typeof (item as EventFaq).question === "string" &&
-      typeof (item as EventFaq).answer === "string",
-  );
-}
 
 export async function generateStaticParams() {
-  const slugs = await getPublishedEventSlugs();
-  return slugs.map((row) => ({ slug: row.slug }));
+  if (!process.env.DATABASE_URL) return [];
+  const events = await getAllPublishedEventSlugs();
+  return events.map((e) => ({ slug: e.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
-  if (!event || !isPublishedEvent(event.content_status)) {
-    return { title: "Evento no encontrado" };
-  }
+  if (!event) return { title: "Evento no encontrado" };
 
   const title = event.seo_title ?? `${event.title} — Boletos y Precios`;
   const description =
@@ -87,17 +61,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventoPage({ params }: Props) {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
-  if (!event || !isPublishedEvent(event.content_status)) notFound();
+  if (!event) notFound();
 
   const isTier2 = event.tier === "tier2";
-  const heroTitle = event.h1_title ?? event.title;
 
   const [sources, otherDates, setlists] = await Promise.all([
     getEventSources(event.id),
-    event.artist_id && !isTier2
+    event.artist_id
       ? getArtistOtherDates(event.artist_id, slug)
       : Promise.resolve([]),
-    event.artist_id && !isTier2
+    event.artist_id
       ? getArtistSetlists(event.artist_id, 1)
       : Promise.resolve([]),
   ]);
@@ -108,18 +81,14 @@ export default async function EventoPage({ params }: Props) {
   const bestPrice =
     availablePrices.length > 0 ? Math.min(...availablePrices) : undefined;
 
-  const generatedFaqs = normalizeFaqs(event.faq_json);
-  const faqs =
-    generatedFaqs.length > 0
-      ? generatedFaqs
-      : buildEventFaqs({
-          title: event.title,
-          artistName: event.artist_name,
-          date: event.date,
-          venueName: event.venue_name,
-          cityName: event.city_name,
-          minPrice: bestPrice,
-        });
+  const faqs = buildEventFaqs({
+    title: event.title,
+    artistName: event.artist_name,
+    date: event.date,
+    venueName: event.venue_name,
+    cityName: event.city_name,
+    minPrice: bestPrice,
+  });
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 
@@ -198,7 +167,7 @@ export default async function EventoPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      <div className="mx-auto max-w-[var(--container-max)] px-4 py-8">
+      <main className="mx-auto max-w-[var(--container-max)] px-4 py-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="mb-4">
           <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
@@ -221,19 +190,16 @@ export default async function EventoPage({ params }: Props) {
                 <li aria-hidden>›</li>
               </>
             )}
-            <li
-              aria-current="page"
-              className="truncate text-[var(--color-text)]"
-            >
+            <li aria-current="page" className="truncate text-[var(--color-text)]">
               {event.title}
             </li>
           </ol>
         </nav>
 
-        {/* Hero */}
+        {/* Hero — compact for tier2 */}
         <EventHero
-          variant={event.tier === "tier1" ? "tier1" : "tier2"}
-          title={heroTitle}
+          variant={event.tier as "tier1" | "tier2"}
+          title={event.title}
           artistName={event.artist_name ?? undefined}
           artistSlug={event.artist_slug ?? undefined}
           venueName={event.venue_name ?? ""}
@@ -272,11 +238,7 @@ export default async function EventoPage({ params }: Props) {
 
         {/* Price comparison */}
         {priceRows.length > 0 && (
-          <section
-            id="precios"
-            aria-labelledby="precios-heading"
-            className="mb-8"
-          >
+          <section id="precios" aria-labelledby="precios-heading" className="mb-8">
             <h2
               id="precios-heading"
               className="font-display mb-3 text-xl font-bold text-[var(--color-text)]"
@@ -304,12 +266,21 @@ export default async function EventoPage({ params }: Props) {
               </section>
             )}
 
-            {setlistTracks.length > 0 && (
-              <SetlistPreview
-                tracks={setlistTracks}
-                sourceLabel="Setlist.fm"
-                sourceUrl={latestSetlist.source_url ?? undefined}
-              />
+            {/* Setlist — tier1 only, only if data exists */}
+            {!isTier2 && setlistTracks.length > 0 && (
+              <section aria-labelledby="setlist-heading">
+                <h2
+                  id="setlist-heading"
+                  className="font-display mb-3 text-xl font-bold text-[var(--color-text)]"
+                >
+                  Probable setlist
+                </h2>
+                <SetlistPreview
+                  tracks={setlistTracks}
+                  sourceLabel="Setlist.fm"
+                  sourceUrl={latestSetlist.source_url ?? undefined}
+                />
+              </section>
             )}
 
             <FaqAccordion faqs={faqs} />
@@ -364,7 +335,8 @@ export default async function EventoPage({ params }: Props) {
               </div>
             </section>
 
-            {tourStops.length > 0 && (
+            {/* Tour history — tier1 only, only if data exists */}
+            {!isTier2 && tourStops.length > 0 && (
               <section aria-labelledby="other-dates-heading">
                 <h2
                   id="other-dates-heading"
@@ -408,7 +380,7 @@ export default async function EventoPage({ params }: Props) {
             </div>
           </section>
         ) : null}
-      </div>
+      </main>
 
       {priceRows.length > 0 && (
         <StickyMobileCTA

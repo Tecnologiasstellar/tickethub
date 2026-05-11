@@ -7,14 +7,11 @@ export interface EventPageEvent {
   date: string;
   status: string;
   tier: string;
-  content_status: string;
   seo_title: string | null;
   seo_description: string | null;
   description_es: string | null;
   context_text: string | null;
   image_url: string | null;
-  h1_title: string | null;
-  faq_json: unknown;
   artist_id: string | null;
   artist_name: string | null;
   artist_slug: string | null;
@@ -60,9 +57,8 @@ export interface OtherDate {
 export async function getEventBySlug(slug: string): Promise<EventPageEvent | null> {
   return queryOne<EventPageEvent>(`
     SELECT
-      e.id, e.slug, e.title, e.date, e.status, e.tier, e.content_status,
-      e.seo_title, e.seo_description, e.description_es, e.context_text,
-      e.image_url, e.h1_title, e.faq_json,
+      e.id, e.slug, e.title, e.date, e.status, e.tier,
+      e.seo_title, e.seo_description, e.description_es, e.context_text, e.image_url,
       e.artist_id,
       a.name        AS artist_name,      a.slug        AS artist_slug,
       a.image_url   AS artist_image_url, a.genres      AS artist_genres,
@@ -131,13 +127,8 @@ export async function getArtistOtherDates(
     WHERE e.artist_id = $1
       AND e.slug != $2
       AND e.date > NOW()
-      AND e.status IN ('active', 'sold_out')
-      AND e.content_status = 'published'
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
+      AND e.status = 'active'
     ORDER BY e.date ASC
     LIMIT 6
   `, [artistId, excludeSlug]);
 }
-

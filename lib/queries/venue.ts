@@ -10,7 +10,6 @@ export interface VenuePageVenue {
   lng: number | null;
   image_url: string | null;
   description_es: string | null;
-  content_status: string;
   city_id: string | null;
   city_name: string | null;
   city_slug: string | null;
@@ -32,9 +31,8 @@ export async function getVenueBySlug(slug: string): Promise<VenuePageVenue | nul
   return queryOne<VenuePageVenue>(`
     SELECT
       v.id, v.name, v.slug, v.address, v.capacity, v.lat, v.lng,
-      v.image_url, v.description_es, v.content_status, v.city_id,
-      c.name AS city_name,
-      c.slug AS city_slug
+      v.image_url, v.description_es, v.city_id,
+      c.name AS city_name, c.slug AS city_slug
     FROM venues v
     LEFT JOIN cities c ON v.city_id = c.id
     WHERE v.slug = $1
@@ -56,20 +54,13 @@ export async function getVenueUpcomingEvents(venueId: string): Promise<VenueEven
     FROM events e
     LEFT JOIN artists a ON e.artist_id = a.id
     WHERE e.venue_id = $1
-      AND e.status IN ('active', 'sold_out')
-      AND e.content_status = 'published'
+      AND e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
     ORDER BY e.date ASC
   `, [venueId]);
 }
 
-export async function getVenuePastEvents(
-  venueId: string,
-  limit = 10,
-): Promise<VenueEvent[]> {
+export async function getVenuePastEvents(venueId: string, limit = 10): Promise<VenueEvent[]> {
   return query<VenueEvent>(`
     SELECT
       e.id, e.slug, e.title, e.date,
@@ -85,12 +76,7 @@ export async function getVenuePastEvents(
     LEFT JOIN artists a ON e.artist_id = a.id
     WHERE e.venue_id = $1
       AND e.date <= NOW()
-      AND e.content_status = 'published'
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
     ORDER BY e.date DESC
     LIMIT $2
   `, [venueId, limit]);
 }
-

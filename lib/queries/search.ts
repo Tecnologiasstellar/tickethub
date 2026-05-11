@@ -1,30 +1,15 @@
 import { query } from "@/lib/db";
+import type { HomeEvent } from "@/lib/queries/home";
 
-export interface SearchResult {
-  id: string;
-  slug: string;
-  title: string;
-  date: string;
-  image_url: string | null;
-  artist_name: string | null;
-  venue_name: string | null;
-  city_name: string | null;
-  min_price: number | null;
-  source_count: number;
-}
-
-export async function searchEvents(q: string): Promise<SearchResult[]> {
-  const term = q.trim();
-  if (!term) return [];
-
-  return query<SearchResult>(
+export async function searchEvents(q: string, limit = 48): Promise<HomeEvent[]> {
+  const term = `%${q}%`;
+  return query<HomeEvent>(
     `
     SELECT
-      e.id, e.slug, e.title, e.date,
-      COALESCE(e.image_url, a.image_url) AS image_url,
-      a.name AS artist_name,
-      v.name AS venue_name,
-      c.name AS city_name,
+      e.id, e.slug, e.title, e.date, e.image_url,
+      a.name  AS artist_name, a.slug AS artist_slug,
+      v.name  AS venue_name,
+      c.name  AS city_name,  c.slug AS city_slug,
       (SELECT MIN(ps.min_price)
        FROM event_sources es
        JOIN price_snapshots ps ON ps.event_source_id = es.id
@@ -35,13 +20,17 @@ export async function searchEvents(q: string): Promise<SearchResult[]> {
     LEFT JOIN artists a ON e.artist_id = a.id
     LEFT JOIN venues  v ON e.venue_id  = v.id
     LEFT JOIN cities  c ON e.city_id   = c.id
-    WHERE e.title ILIKE $1
-       OR a.name  ILIKE $1
-       OR c.name  ILIKE $1
-       OR v.name  ILIKE $1
+    WHERE e.status = 'active'
+      AND e.date > NOW()
+      AND (
+        e.title    ILIKE $1 OR
+        a.name     ILIKE $1 OR
+        c.name     ILIKE $1 OR
+        v.name     ILIKE $1
+      )
     ORDER BY e.date ASC
-    LIMIT 20
+    LIMIT $2
     `,
-    [`%${term}%`],
+    [term, limit],
   );
 }

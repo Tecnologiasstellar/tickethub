@@ -1,3 +1,4 @@
+# .github/workflows/fetch-events.yml
 name: Fetch Events (API Sources)
 
 on:
@@ -9,20 +10,13 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Call /api/cron/fetch-events
+      - name: Call fetch-events cron endpoint
         run: |
-          STATUS=$(curl -s -o /tmp/fetch-events.json -w "%{http_code}" \
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "${{ secrets.VERCEL_URL }}/api/cron/fetch-events" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "── /api/cron/fetch-events → HTTP $STATUS ──"
-          cat /tmp/fetch-events.json || true
-          echo
-          echo "## Cron run summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Endpoint | HTTP |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| /api/cron/fetch-events | $STATUS |" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$STATUS" != "200" ]; then
-            echo "Endpoint did not return 200"
+          echo "Response: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Cron endpoint returned $HTTP_STATUS"
             exit 1
           fi

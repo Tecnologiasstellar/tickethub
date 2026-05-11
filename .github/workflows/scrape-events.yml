@@ -1,3 +1,4 @@
+# .github/workflows/scrape-events.yml
 name: Scrape Events (Playwright)
 
 on:
@@ -23,13 +24,11 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Scrape Boletia
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/scrape-boletia.ts
 
       - name: Scrape Superboletos
-        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npx tsx scripts/scrape-superboletos.ts

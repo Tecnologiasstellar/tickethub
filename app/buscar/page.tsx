@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { EventCard } from "@/components/EventCard";
+import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
+import { EventCard } from "@/components/EventCard";
 import { searchEvents } from "@/lib/queries/search";
 
 export const dynamic = "force-dynamic";
@@ -8,55 +9,53 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ q?: string }> };
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const { q } = await searchParams;
-  const term = (q ?? "").trim();
-  if (!term) {
-    return {
-      title: { absolute: "Buscar eventos | TicketHub.mx" },
-      description: "Busca conciertos, festivales y eventos en México.",
-      robots: { index: false, follow: true },
-    };
-  }
-  return {
-    title: { absolute: `Resultados para "${term}" | TicketHub.mx` },
-    description: `Resultados de búsqueda para "${term}" en TicketHub.mx.`,
-    robots: { index: false, follow: true },
-  };
+  const { q = "" } = await searchParams;
+  const title = q
+    ? `Resultados para "${q}" — TicketHub.mx`
+    : "Buscar eventos — TicketHub.mx";
+  return { title, robots: { index: false } };
 }
 
 export default async function BuscarPage({ searchParams }: Props) {
-  const { q } = await searchParams;
-  const term = (q ?? "").trim();
-  const results = term ? await searchEvents(term) : [];
+  const { q = "" } = await searchParams;
+  const trimmed = q.trim();
+  const events = trimmed.length >= 2 ? await searchEvents(trimmed) : [];
 
   return (
-    <div className="mx-auto max-w-[var(--container-max)] px-4 py-10">
-      <header className="mb-8">
-        <h1 className="font-display text-3xl font-bold text-[var(--color-text)] md:text-4xl">
-          {term ? <>Resultados para &ldquo;{term}&rdquo;</> : "Buscar eventos"}
-        </h1>
-        {term && (
-          <p className="mt-2 text-[var(--color-text-muted)]">
-            {results.length === 0
-              ? "Sin resultados"
-              : `${results.length} ${results.length === 1 ? "evento encontrado" : "eventos encontrados"}`}
-          </p>
-        )}
-        <div className="mt-6">
-          <SearchBar />
-        </div>
-      </header>
+    <main className="mx-auto max-w-[var(--container-max)] px-4 py-8">
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="mb-4">
+        <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
+          <li>
+            <Link href="/" className="hover:text-[var(--color-primary)]">
+              Inicio
+            </Link>
+          </li>
+          <li aria-hidden>›</li>
+          <li className="text-[var(--color-text)]" aria-current="page">
+            Buscar
+          </li>
+        </ol>
+      </nav>
 
-      {term && results.length === 0 && (
-        <p className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-[var(--color-text-muted)]">
-          No encontramos eventos para &ldquo;{term}&rdquo;. Intenta con otro
-          artista o ciudad.
-        </p>
+      {/* Search input */}
+      <div className="mb-8">
+        <SearchBar placeholder="Busca artistas, eventos o ciudades…" />
+      </div>
+
+      {/* Results header */}
+      {trimmed.length >= 2 && (
+        <h1 className="font-display mb-6 text-2xl font-bold text-[var(--color-text)]">
+          {events.length > 0
+            ? `${events.length} resultado${events.length !== 1 ? "s" : ""} para "${trimmed}"`
+            : `Sin resultados para "${trimmed}"`}
+        </h1>
       )}
 
-      {results.length > 0 && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map(ev => (
+      {/* Event grid */}
+      {events.length > 0 && (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {events.map((ev) => (
             <EventCard
               key={ev.id}
               href={`/evento/${ev.slug}`}
@@ -72,6 +71,21 @@ export default async function BuscarPage({ searchParams }: Props) {
           ))}
         </div>
       )}
-    </div>
+
+      {/* Empty state */}
+      {trimmed.length >= 2 && events.length === 0 && (
+        <div className="py-16 text-center text-[var(--color-text-muted)]">
+          <p className="text-lg">No encontramos eventos para &ldquo;{trimmed}&rdquo;.</p>
+          <p className="mt-2 text-sm">Intenta con otro artista, ciudad o venue.</p>
+        </div>
+      )}
+
+      {/* Prompt when no query */}
+      {trimmed.length < 2 && (
+        <p className="text-center text-[var(--color-text-muted)]">
+          Escribe al menos 2 caracteres para buscar.
+        </p>
+      )}
+    </main>
   );
 }

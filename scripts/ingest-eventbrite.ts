@@ -5,15 +5,9 @@ import { ingestNormalizedEvent } from "../lib/dedupe/ingest";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 async function main() {
-  const token = process.env.EVENTBRITE_API_KEY;
-  if (!token) {
-    console.error("[eventbrite] EVENTBRITE_API_KEY is not set — skipping");
-    process.exit(0);
-  }
-
   if (DRY_RUN) console.log("[eventbrite] DRY RUN — no DB writes");
 
-  const client = new EventbriteClient(token);
+  const client = new EventbriteClient();
 
   const stats = {
     fetched: 0,

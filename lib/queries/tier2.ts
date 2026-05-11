@@ -1,15 +1,7 @@
 import slugify from "slugify";
 import { query } from "@/lib/db";
 
-export interface StaticSlug {
-  slug: string;
-}
-
-export interface SitemapSlugRow {
-  slug: string;
-  updated_at: string;
-}
-
+// Shared event card shape reused across tier2 listing pages
 export interface Tier2ListingEvent {
   id: string;
   slug: string;
@@ -26,113 +18,86 @@ export interface Tier2ListingEvent {
   source_count: number;
 }
 
-export interface CityMonthCombo {
-  slug: string;
-  mes: string;
-  updated_at: string;
-}
+// ── generateStaticParams helpers ──────────────────────────────────────────────
 
-export interface GenreMeta {
-  name: string;
-  slug: string;
-  event_count: number;
-  updated_at: string;
-}
-
-function genreSlug(genre: string): string {
-  return slugify(genre, { lower: true, strict: true, locale: "es" });
-}
-
-export async function getPublishedEventSlugs(): Promise<StaticSlug[]> {
-  return query<StaticSlug>(`
-    SELECT e.slug
-    FROM events e
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
-      AND e.date > NOW() - INTERVAL '1 day'
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY e.date ASC
+/** All published events (tier1 + tier2) for generateStaticParams. */
+export async function getAllPublishedEventSlugs(): Promise<{ slug: string }[]> {
+  return query<{ slug: string }>(`
+    SELECT slug
+    FROM events
+    WHERE content_status = 'published'
+      AND status IN ('active', 'sold_out')
+    ORDER BY date DESC
   `);
 }
 
-export async function getPublishedArtistSlugs(): Promise<StaticSlug[]> {
-  return query<StaticSlug>(`
+/** All published artists that have at least one upcoming active event. */
+export async function getAllPublishedArtistSlugs(): Promise<{ slug: string }[]> {
+  return query<{ slug: string }>(`
     SELECT DISTINCT a.slug
     FROM artists a
     JOIN events e ON e.artist_id = a.id
     WHERE a.content_status = 'published'
-      AND e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+      AND e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY a.slug ASC
+    ORDER BY a.slug
   `);
 }
 
-export async function getPublishedCitySlugs(): Promise<StaticSlug[]> {
-  return query<StaticSlug>(`
+/** All cities that have at least one upcoming active event. */
+export async function getAllCitySlugsWithEvents(): Promise<{ slug: string }[]> {
+  return query<{ slug: string }>(`
     SELECT DISTINCT c.slug
     FROM cities c
     JOIN events e ON e.city_id = c.id
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+    WHERE e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY c.slug ASC
+    ORDER BY c.slug
   `);
 }
 
-export async function getPublishedVenueSlugs(): Promise<StaticSlug[]> {
-  return query<StaticSlug>(`
+/** All published venues that have at least one upcoming active event. */
+export async function getAllVenueSlugsWithEvents(): Promise<{ slug: string }[]> {
+  return query<{ slug: string }>(`
     SELECT DISTINCT v.slug
     FROM venues v
     JOIN events e ON e.venue_id = v.id
     WHERE v.content_status = 'published'
-      AND e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+      AND e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY v.slug ASC
+    ORDER BY v.slug
   `);
 }
 
-export async function getPublishedCityMonthCombos(): Promise<CityMonthCombo[]> {
-  const rows = await query<{
-    slug: string;
-    mes: string;
-    updated_at: string;
-  }>(`
-    SELECT
-      c.slug AS slug,
-      TO_CHAR(DATE_TRUNC('month', e.date), 'YYYY-MM') AS mes,
-      MAX(e.updated_at)::text AS updated_at
+// ── City + month ──────────────────────────────────────────────────────────────
+
+export interface CityMonthCombo {
+  citySlug: string;
+  mes: string; // YYYY-MM
+}
+
+/**
+ * All future city+month combinations that have at least one active event.
+ * Used for generateStaticParams and the sitemap.
+ */
+export async function getAllCityMonthCombos(): Promise<CityMonthCombo[]> {
+  const rows = await query<{ city_slug: string; mes: string }>(`
+    SELECT DISTINCT
+      c.slug           AS city_slug,
+      TO_CHAR(e.date, 'YYYY-MM') AS mes
     FROM events e
     JOIN cities c ON e.city_id = c.id
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+    WHERE e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    GROUP BY c.slug, DATE_TRUNC('month', e.date)
-    ORDER BY DATE_TRUNC('month', e.date) ASC, c.slug ASC
+    ORDER BY mes ASC, city_slug ASC
   `);
-
-  return rows.map((row) => ({
-    slug: row.slug,
-    mes: row.mes,
-    updated_at: row.updated_at,
-  }));
+  return rows.map((r) => ({ citySlug: r.city_slug, mes: r.mes }));
 }
 
+/**
+ * Events in a specific city during a specific month.
+ * `mes` is a YYYY-MM string, e.g. "2025-03".
+ */
 export async function getCityMonthEvents(
   citySlug: string,
   mes: string,
@@ -152,78 +117,66 @@ export async function getCityMonthEvents(
       ) AS min_price,
       (SELECT COUNT(*)::int FROM event_sources WHERE event_id = e.id) AS source_count
     FROM events e
-    JOIN cities c ON e.city_id = c.id
+    JOIN cities  c ON e.city_id   = c.id
     LEFT JOIN artists a ON e.artist_id = a.id
-    LEFT JOIN venues v ON e.venue_id = v.id
+    LEFT JOIN venues  v ON e.venue_id  = v.id
     WHERE c.slug = $1
-      AND e.date >= TO_DATE($2, 'YYYY-MM')
-      AND e.date < TO_DATE($2, 'YYYY-MM') + INTERVAL '1 month'
-      AND e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
+      AND TO_CHAR(e.date, 'YYYY-MM') = $2
+      AND e.status = 'active'
     ORDER BY e.date ASC
   `,
     [citySlug, mes],
   );
 }
 
-export async function getActiveGenres(): Promise<GenreMeta[]> {
-  const rows = await query<{
-    genre: string;
-    event_count: number;
-    updated_at: string;
-  }>(`
+// ── Genres ────────────────────────────────────────────────────────────────────
+
+export interface GenreMeta {
+  name: string;
+  slug: string;
+  event_count: number;
+}
+
+/** All genres that have at least one upcoming active event, with their URL slug. */
+export async function getAllActiveGenres(): Promise<GenreMeta[]> {
+  const rows = await query<{ genre: string; event_count: number }>(`
     SELECT
-      g.genre AS genre,
-      COUNT(DISTINCT e.id)::int AS event_count,
-      MAX(e.updated_at)::text AS updated_at
+      unnest(a.genres)       AS genre,
+      COUNT(DISTINCT e.id)::int AS event_count
     FROM artists a
-    JOIN LATERAL unnest(a.genres) AS g(genre) ON true
     JOIN events e ON e.artist_id = a.id
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+    WHERE e.status = 'active'
       AND e.date > NOW()
       AND a.genres IS NOT NULL
       AND cardinality(a.genres) > 0
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    GROUP BY g.genre
-    ORDER BY event_count DESC, g.genre ASC
+    GROUP BY genre
+    ORDER BY event_count DESC
   `);
-
-  const bySlug = new Map<string, GenreMeta>();
-  for (const row of rows) {
-    const slug = genreSlug(row.genre);
-    if (!slug || bySlug.has(slug)) continue;
-    bySlug.set(slug, {
-      name: row.genre,
-      slug,
-      event_count: row.event_count,
-      updated_at: row.updated_at,
-    });
-  }
-
-  return Array.from(bySlug.values());
+  return rows.map((r) => ({
+    name: r.genre,
+    slug: slugify(r.genre, { lower: true, strict: true }),
+    event_count: r.event_count,
+  }));
 }
 
-export async function getGenreBySlug(slug: string): Promise<GenreMeta | null> {
-  const genres = await getActiveGenres();
-  return genres.find((genre) => genre.slug === slug) ?? null;
+/**
+ * Find genre metadata by URL slug.
+ * Returns null if no upcoming events exist for this genre.
+ */
+export async function getGenreBySlug(genreSlug: string): Promise<GenreMeta | null> {
+  // Slugs are computed in JS (slugify can't run in Postgres), so we fetch all and match.
+  const genres = await getAllActiveGenres();
+  return genres.find((g) => g.slug === genreSlug) ?? null;
 }
 
-export async function getGenreEvents(slug: string): Promise<Tier2ListingEvent[]> {
-  const genre = await getGenreBySlug(slug);
+/**
+ * Upcoming events for a genre slug.
+ * Resolves slug → genre name first, then queries events.
+ */
+export async function getGenreEvents(genreSlug: string): Promise<Tier2ListingEvent[]> {
+  const genre = await getGenreBySlug(genreSlug);
   if (!genre) return [];
 
-  return getGenreEventsByName(genre.name);
-}
-
-export async function getGenreEventsByName(
-  genreName: string,
-): Promise<Tier2ListingEvent[]> {
   return query<Tier2ListingEvent>(
     `
     SELECT
@@ -239,80 +192,69 @@ export async function getGenreEventsByName(
       ) AS min_price,
       (SELECT COUNT(*)::int FROM event_sources WHERE event_id = e.id) AS source_count
     FROM events e
-    JOIN artists a ON e.artist_id = a.id
-    LEFT JOIN venues v ON e.venue_id = v.id
-    LEFT JOIN cities c ON e.city_id = c.id
-    WHERE $1 = ANY(a.genres)
-      AND e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+    LEFT JOIN artists a ON e.artist_id = a.id
+    LEFT JOIN venues  v ON e.venue_id  = v.id
+    LEFT JOIN cities  c ON e.city_id   = c.id
+    WHERE e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
+      AND $1 = ANY(a.genres)
     ORDER BY e.date ASC
-    LIMIT 72
+    LIMIT 60
   `,
-    [genreName],
+    [genre.name],
   );
+}
+
+// ── Sitemap helpers ───────────────────────────────────────────────────────────
+
+export interface SitemapSlugRow {
+  slug: string;
+  updated_at: string;
 }
 
 export async function getSitemapEventRows(): Promise<SitemapSlugRow[]> {
   return query<SitemapSlugRow>(`
-    SELECT e.slug, e.updated_at::text AS updated_at
-    FROM events e
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
-      AND e.date > NOW() - INTERVAL '1 day'
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY e.date ASC
+    SELECT slug, updated_at
+    FROM events
+    WHERE content_status = 'published'
+      AND status IN ('active', 'sold_out')
+      AND date > NOW() - INTERVAL '7 days'
+    ORDER BY date DESC
   `);
 }
 
 export async function getSitemapArtistRows(): Promise<SitemapSlugRow[]> {
   return query<SitemapSlugRow>(`
-    SELECT DISTINCT ON (a.slug) a.slug, a.updated_at::text AS updated_at
+    SELECT DISTINCT ON (a.slug) a.slug, a.updated_at
     FROM artists a
     JOIN events e ON e.artist_id = a.id
     WHERE a.content_status = 'published'
-      AND e.content_status = 'published'
       AND e.status IN ('active', 'sold_out')
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY a.slug ASC, a.updated_at DESC
+    ORDER BY a.slug
   `);
 }
 
 export async function getSitemapCityRows(): Promise<SitemapSlugRow[]> {
+  // Cities have no content_status; surface any city that has upcoming active events.
   return query<SitemapSlugRow>(`
-    SELECT DISTINCT ON (c.slug) c.slug, c.updated_at::text AS updated_at
+    SELECT DISTINCT ON (c.slug) c.slug, c.updated_at
     FROM cities c
     JOIN events e ON e.city_id = c.id
-    WHERE e.content_status = 'published'
-      AND e.status IN ('active', 'sold_out')
+    WHERE e.status IN ('active', 'sold_out')
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY c.slug ASC, c.updated_at DESC
+    ORDER BY c.slug
   `);
 }
 
 export async function getSitemapVenueRows(): Promise<SitemapSlugRow[]> {
   return query<SitemapSlugRow>(`
-    SELECT DISTINCT ON (v.slug) v.slug, v.updated_at::text AS updated_at
+    SELECT DISTINCT ON (v.slug) v.slug, v.updated_at
     FROM venues v
     JOIN events e ON e.venue_id = v.id
     WHERE v.content_status = 'published'
-      AND e.content_status = 'published'
       AND e.status IN ('active', 'sold_out')
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
-    ORDER BY v.slug ASC, v.updated_at DESC
+    ORDER BY v.slug
   `);
 }

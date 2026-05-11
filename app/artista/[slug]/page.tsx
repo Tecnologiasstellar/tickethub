@@ -1,42 +1,40 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
 import { SetlistPreview } from "@/components/SetlistPreview";
-import { TourHistoryTimeline } from "@/components/TourHistoryTimeline";
 import { Badge } from "@/components/ui/Badge";
-import { formatDate } from "@/lib/utils/format";
+import { DataPill } from "@/components/ui/DataPill";
 import {
   getArtistBySlug,
   getArtistUpcomingEvents,
   getArtistSetlists,
   getSimilarArtists,
 } from "@/lib/queries/artista";
-import { getPublishedArtistSlugs } from "@/lib/queries/tier2";
-import { buildMusicGroupSchema, buildBreadcrumbSchema } from "@/lib/seo/jsonld";
+import { getAllPublishedArtistSlugs } from "@/lib/queries/tier2";
+import {
+  buildMusicGroupSchema,
+  buildBreadcrumbSchema,
+} from "@/lib/seo/jsonld";
 
-export const revalidate = 3600;
+export const revalidate = 1800;
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getPublishedArtistSlugs();
-  return slugs.map(row => ({ slug: row.slug }));
+  if (!process.env.DATABASE_URL) return [];
+  const artists = await getAllPublishedArtistSlugs();
+  return artists.map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
-  if (!artist || artist.content_status !== "published") {
-    return { title: "Artista no encontrado" };
-  }
+  if (!artist) return { title: "Artista no encontrado" };
 
-  const title = `${artist.name} en México — Fechas y boletos`;
-  const description =
-    artist.bio_es ??
-    `Próximas fechas de ${artist.name} en México. Compara precios de boletos en todas las plataformas.`;
+  const title = `${artist.name} — Conciertos y Boletos`;
+  const description = `Conciertos de ${artist.name} en México. Compara precios de boletos y encuentra las mejores ofertas.`;
 
   return {
     title,
@@ -53,36 +51,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArtistaPage({ params }: Props) {
   const { slug } = await params;
   const artist = await getArtistBySlug(slug);
-  if (!artist || artist.content_status !== "published") notFound();
+  if (!artist) notFound();
 
   const [upcomingEvents, setlists, similarArtists] = await Promise.all([
     getArtistUpcomingEvents(artist.id),
-    getArtistSetlists(artist.id, 3),
+    getArtistSetlists(artist.id, 5),
     getSimilarArtists(artist.id, artist.genres ?? [], 6),
   ]);
-  if (upcomingEvents.length === 0) notFound();
-
-  const tourStops = [
-    ...upcomingEvents.map(e => ({
-      id: e.id,
-      date: e.date,
-      venueName: e.venue_name ?? "Por confirmar",
-      cityName: e.city_name ?? "",
-      upcoming: true,
-      href: `/evento/${e.slug}`,
-    })),
-    ...setlists.map(s => ({
-      id: s.id,
-      date: s.event_date ?? "",
-      venueName: s.venue_name ?? "Venue",
-      cityName: `${s.city_name ?? ""}${s.country ? `, ${s.country}` : ""}`,
-      upcoming: false,
-    })),
-  ].filter(s => s.date);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tickethub.mx";
 
-  const artistSchema = buildMusicGroupSchema(
+  const musicGroupSchema = buildMusicGroupSchema(
     {
       name: artist.name,
       slug: artist.slug,
@@ -91,6 +70,7 @@ export default async function ArtistaPage({ params }: Props) {
     },
     siteUrl,
   );
+
   const breadcrumbSchema = buildBreadcrumbSchema(
     [
       { name: "Inicio", href: "/" },
@@ -112,216 +92,164 @@ export default async function ArtistaPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(artistSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(musicGroupSchema) }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      <div className="mx-auto max-w-[var(--container-max)] px-4 py-8">
+      <main className="mx-auto max-w-[var(--container-max)] px-4 py-8">
         {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="mb-6">
-          <ol className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+        <nav aria-label="Breadcrumb" className="mb-4">
+          <ol className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <li>
-              <Link href="/" className="hover:text-[var(--color-primary)]">Inicio</Link>
+              <Link href="/" className="hover:text-[var(--color-primary)]">
+                Inicio
+              </Link>
             </li>
             <li aria-hidden>›</li>
-            <li aria-current="page" className="text-[var(--color-text)]">
+            <li
+              className="text-[var(--color-text)]"
+              aria-current="page"
+            >
               {artist.name}
             </li>
           </ol>
         </nav>
 
-        {/* Artist header */}
-        {artist.image_url ? (
-          <header className="relative mb-10 overflow-hidden rounded-[var(--radius-xl)] ring-1 ring-[var(--color-border)]">
-            <div className="relative aspect-[16/7] w-full">
-              <Image
-                src={artist.image_url}
-                alt={artist.name}
-                fill
-                priority
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-black/60" aria-hidden />
-              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">
-                <h1 className="font-display text-4xl font-bold text-white drop-shadow-md md:text-6xl">
-                  {artist.name}
-                </h1>
-                {artist.genres?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {artist.genres.map(g => (
-                      <Badge key={g} tone="primary" variant="soft">
-                        {g}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-                {artist.popularity != null && (
-                  <p className="mt-2 text-sm text-white/80">
-                    Popularidad:{" "}
-                    <span className="font-semibold text-white">
-                      {artist.popularity}/100
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-            {artist.bio_es && (
-              <div className="bg-[var(--color-surface)] p-6 sm:p-8">
-                <p className="max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
-                  {artist.bio_es}
-                </p>
+        {/* Artist Header */}
+        <section className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          {artist.image_url && (
+            <img
+              src={artist.image_url}
+              alt={artist.name}
+              width={120}
+              height={120}
+              className="h-28 w-28 shrink-0 rounded-full object-cover border border-[var(--color-border)]"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-3xl font-bold text-[var(--color-text)] mb-2">
+              {artist.name}
+            </h1>
+
+            {artist.genres && artist.genres.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {artist.genres.map((genre) => (
+                  <Badge key={genre} tone="primary" variant="soft">
+                    {genre}
+                  </Badge>
+                ))}
               </div>
             )}
-          </header>
-        ) : (
-          <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex h-36 w-36 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] ring-2 ring-[var(--color-border)]">
-              <span className="font-display text-4xl font-bold text-[var(--color-primary)]">
-                {artist.name.charAt(0).toUpperCase()}
-              </span>
+
+            {artist.bio_es && (
+              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 max-w-2xl">
+                {artist.bio_es}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <DataPill
+                label="Próximos conciertos"
+                value={upcomingEvents.length}
+                compact
+              />
             </div>
-            <div className="min-w-0">
-              <h1 className="font-display text-4xl font-bold text-[var(--color-text)] md:text-5xl">
-                {artist.name}
-              </h1>
-              {artist.genres?.length ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {artist.genres.map(g => (
-                    <Badge key={g} tone="primary" variant="soft">
-                      {g}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-              {artist.popularity != null && (
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                  Popularidad:{" "}
-                  <span className="font-semibold text-[var(--color-text)]">
-                    {artist.popularity}/100
-                  </span>
-                </p>
-              )}
-              {artist.bio_es && (
-                <p className="mt-4 max-w-prose leading-[var(--leading-relaxed)] text-[var(--color-text-muted)]">
-                  {artist.bio_es}
-                </p>
-              )}
+          </div>
+        </section>
+
+        {/* Upcoming Events */}
+        {upcomingEvents.length > 0 && (
+          <section className="mb-8">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
+              Próximos conciertos
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {upcomingEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  href={`/evento/${event.slug}`}
+                  title={event.title}
+                  artistName={artist.name}
+                  venueName={event.venue_name ?? "Por confirmar"}
+                  cityName={event.city_name ?? "México"}
+                  date={event.date}
+                  minPrice={event.min_price ?? undefined}
+                  currency="MXN"
+                  sourceCount={event.source_count}
+                />
+              ))}
             </div>
-          </header>
+          </section>
         )}
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
-          {/* Main column */}
-          <div className="space-y-10">
-            {upcomingEvents.length > 0 && (
-              <section aria-labelledby="upcoming-heading">
-                <h2
-                  id="upcoming-heading"
-                  className="font-display mb-5 text-2xl font-bold text-[var(--color-text)]"
+        {/* Setlist Section */}
+        {setlists.length > 0 && latestSetlist && (
+          <section className="mb-8">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
+              Setlist reciente
+            </h2>
+            {latestSetlist.venue_name && (
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                {latestSetlist.venue_name}
+                {latestSetlist.city_name ? `, ${latestSetlist.city_name}` : ""}
+                {latestSetlist.event_date
+                  ? ` — ${new Date(latestSetlist.event_date).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })}`
+                  : ""}
+              </p>
+            )}
+            <SetlistPreview
+              tracks={setlistTracks}
+              sourceLabel={latestSetlist.source_url ? "setlist.fm" : undefined}
+              sourceUrl={latestSetlist.source_url ?? undefined}
+            />
+          </section>
+        )}
+
+        {/* Similar Artists */}
+        {similarArtists.length > 0 && (
+          <section className="mb-8">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
+              Artistas similares
+            </h2>
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+              {similarArtists.map((similar) => (
+                <a
+                  key={similar.id}
+                  href={`/artista/${similar.slug}`}
+                  className="group flex flex-col items-center gap-2 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center hover:border-[var(--color-primary)] transition-colors"
                 >
-                  Próximas fechas en México
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {upcomingEvents.map(ev => (
-                    <EventCard
-                      key={ev.id}
-                      href={`/evento/${ev.slug}`}
-                      title={ev.title}
-                      venueName={ev.venue_name ?? ""}
-                      cityName={ev.city_name ?? ""}
-                      date={ev.date}
-                      imageUrl={artist.image_url ?? undefined}
-                      minPrice={ev.min_price ?? undefined}
-                      sourceCount={ev.source_count}
+                  {similar.image_url ? (
+                    <img
+                      src={similar.image_url}
+                      alt={similar.name}
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 rounded-full object-cover"
                     />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {setlistTracks.length > 0 && (
-              <section aria-labelledby="setlist-heading">
-                <h2
-                  id="setlist-heading"
-                  className="font-display mb-4 text-2xl font-bold text-[var(--color-text)]"
-                >
-                  Setlist reciente
-                </h2>
-                <SetlistPreview
-                  title={
-                    latestSetlist.event_date
-                      ? `Setlist del ${formatDate(latestSetlist.event_date)}`
-                      : "Setlist reciente"
-                  }
-                  tracks={setlistTracks}
-                  sourceLabel="Setlist.fm"
-                  sourceUrl={latestSetlist.source_url ?? undefined}
-                />
-              </section>
-            )}
-
-            {similarArtists.length > 0 && (
-              <section aria-labelledby="similar-heading">
-                <h2
-                  id="similar-heading"
-                  className="font-display mb-4 text-2xl font-bold text-[var(--color-text)]"
-                >
-                  Artistas similares
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {similarArtists.map(a => (
-                    <a
-                      key={a.id}
-                      href={`/artista/${a.slug}`}
-                      className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-2)]"
-                    >
-                      {a.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={a.image_url}
-                          alt={a.name}
-                          className="h-12 w-12 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
-                          <span className="font-display text-xl font-bold text-[var(--color-primary)]">
-                            {a.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--color-text)] group-hover:text-[var(--color-primary)]">
-                          {a.name}
-                        </p>
-                        {a.upcoming_count > 0 && (
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            {a.upcoming_count} fecha{a.upcoming_count !== 1 ? "s" : ""}
-                          </p>
-                        )}
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-
-          {/* Sidebar — tour history */}
-          {tourStops.length > 0 && (
-            <aside>
-              <TourHistoryTimeline
-                title="Tour history"
-                stops={tourStops}
-                maxVisible={10}
-              />
-            </aside>
-          )}
-        </div>
-      </div>
+                  ) : (
+                    <div className="h-16 w-16 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-2xl font-display font-bold text-[var(--color-text-muted)]">
+                      {similar.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="min-w-0 w-full">
+                    <p className="font-medium text-sm text-[var(--color-text)] truncate group-hover:text-[var(--color-primary)]">
+                      {similar.name}
+                    </p>
+                    {similar.upcoming_count > 0 && (
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        {similar.upcoming_count} concierto{similar.upcoming_count !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
     </>
   );
 }

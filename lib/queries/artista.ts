@@ -36,9 +36,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistRow | null> {
   return queryOne<ArtistRow>(`SELECT * FROM artists WHERE slug = $1`, [slug]);
 }
 
-export async function getArtistUpcomingEvents(
-  artistId: string,
-): Promise<ArtistUpcomingEvent[]> {
+export async function getArtistUpcomingEvents(artistId: string): Promise<ArtistUpcomingEvent[]> {
   return query<ArtistUpcomingEvent>(`
     SELECT
       e.id, e.slug, e.title, e.date,
@@ -55,19 +53,12 @@ export async function getArtistUpcomingEvents(
     LEFT JOIN cities c ON e.city_id  = c.id
     WHERE e.artist_id = $1
       AND e.date > NOW()
-      AND e.status IN ('active', 'sold_out')
-      AND e.content_status = 'published'
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
+      AND e.status = 'active'
     ORDER BY e.date ASC
   `, [artistId]);
 }
 
-export async function getArtistSetlists(
-  artistId: string,
-  limit = 5,
-): Promise<ArtistSetlist[]> {
+export async function getArtistSetlists(artistId: string, limit = 5): Promise<ArtistSetlist[]> {
   return query<ArtistSetlist>(`
     SELECT id, event_date, venue_name, city_name, country, songs, source_url
     FROM setlists
@@ -89,18 +80,12 @@ export async function getSimilarArtists(
       COUNT(e.id)::int AS upcoming_count
     FROM artists a
     LEFT JOIN events e ON e.artist_id = a.id
-      AND e.status IN ('active', 'sold_out')
-      AND e.content_status = 'published'
+      AND e.status = 'active'
       AND e.date > NOW()
-      AND EXISTS (
-        SELECT 1 FROM event_sources es WHERE es.event_id = e.id
-      )
     WHERE a.id != $1
-      AND a.content_status = 'published'
       AND a.genres && $2
     GROUP BY a.id
     ORDER BY upcoming_count DESC, a.popularity DESC NULLS LAST
     LIMIT $3
   `, [artistId, genres, limit]);
 }
-
