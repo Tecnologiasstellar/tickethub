@@ -1,15 +1,25 @@
 import { scrapeSuperboletos } from "../lib/scrapers/superboletos/scraper";
 import { normalizeSuperboletosEvent } from "../lib/scrapers/superboletos/normalizer";
 import { ingestNormalizedEvent } from "../lib/dedupe/ingest";
+import { loadCheckpoint, markDone, clearCheckpoint } from "../lib/utils/checkpoint";
 
 const DRY_RUN = process.argv.includes("--dry-run");
+const RESET = process.argv.includes("--reset");
 const MAX_EVENTS = parseInt(
   process.argv.find((a) => a.startsWith("--max="))?.split("=")[1] ?? "100",
   10
 );
+const CHECKPOINT_FILE = ".checkpoints/scrape-superboletos.json";
 
 async function main() {
   if (DRY_RUN) console.log("[superboletos] DRY RUN — no DB writes");
+
+  if (RESET) {
+    await clearCheckpoint(CHECKPOINT_FILE);
+    console.log("[superboletos] checkpoint reset");
+  }
+  const done = await loadCheckpoint(CHECKPOINT_FILE);
+  if (done.size) console.log(`[superboletos] ${done.size} already completed, will skip`);
 
   console.log(`[superboletos] starting scrape (max=${MAX_EVENTS})`);
   const raw = await scrapeSuperboletos(MAX_EVENTS);
@@ -33,10 +43,16 @@ async function main() {
       continue;
     }
 
+    if (done.has(normalized.sourceId)) {
+      console.log(`[superboletos] skip ${normalized.sourceId} (already completed)`);
+      continue;
+    }
+
     if (DRY_RUN) {
       console.log(
         `[superboletos] would ingest: "${normalized.title}" (${normalized.cityName}, ${normalized.date.toISOString().slice(0, 10)})`
       );
+      await markDone(CHECKPOINT_FILE, normalized.sourceId);
       continue;
     }
 
@@ -50,6 +66,7 @@ async function main() {
         case "rejected_tribute":  stats.tribute_rejected++; break;
         case "rejected_unknown_city": stats.unknown_city++; break;
       }
+      await markDone(CHECKPOINT_FILE, normalized.sourceId);
     } catch (err) {
       stats.errors++;
       console.error(
