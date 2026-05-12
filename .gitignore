@@ -34,3 +34,6 @@ yarn-error.log*
 next-env.d.ts
 # Claude worktrees
 .claude/worktrees/
+
+# checkpoint files for long batch jobs
+/.checkpoints/

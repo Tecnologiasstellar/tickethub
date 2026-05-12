@@ -309,7 +309,16 @@ export interface BoletiaScrapeResult {
   skipReasons: Record<string, number>;
 }
 
-export async function runBoletiaScrape(): Promise<BoletiaScrapeResult> {
+export interface BoletiaScrapeOptions {
+  dryRun?: boolean;
+  skipIds?: Set<string>;
+  onDone?: (sourceEventId: string) => Promise<void>;
+}
+
+export async function runBoletiaScrape(
+  opts: BoletiaScrapeOptions = {}
+): Promise<BoletiaScrapeResult> {
+  const { dryRun = false, skipIds, onDone } = opts;
   const scraped = await scrapeBoletia();
   const knownSlugs = await loadKnownCitySlugs();
 
@@ -351,6 +360,18 @@ export async function runBoletiaScrape(): Promise<BoletiaScrapeResult> {
     const slug = `${toSlug(ev.title)}-${dateIso.slice(0, 10)}`;
     const sourceEventId = `bl-${ev.urlSlug || toSlug(ev.title)}`;
 
+    if (skipIds?.has(sourceEventId)) {
+      skipped++;
+      skipReasons["checkpoint"] = (skipReasons["checkpoint"] ?? 0) + 1;
+      continue;
+    }
+
+    if (dryRun) {
+      console.log(`[boletia] would ingest: "${ev.title}" (${citySlug}, ${dateIso.slice(0, 10)})`);
+      if (onDone) await onDone(sourceEventId);
+      continue;
+    }
+
     try {
       const artistId = await upsertArtist(artistName);
       const venueId  = await upsertVenue(ev.venueName, cityId);
@@ -365,6 +386,7 @@ export async function runBoletiaScrape(): Promise<BoletiaScrapeResult> {
       });
       const wasCreated = await upsertSource(eventId, sourceEventId, ev.url);
       if (wasCreated) created++;
+      if (onDone) await onDone(sourceEventId);
     } catch (err) {
       console.error(`[boletia] error on "${ev.title}": ${(err as Error).message}`);
       skipped++;

@@ -1,11 +1,21 @@
 import { EventbriteClient } from "../lib/api/eventbrite/client";
 import { normalizeEventbriteEvent } from "../lib/api/eventbrite/normalizer";
 import { ingestNormalizedEvent } from "../lib/dedupe/ingest";
+import { loadCheckpoint, markDone, clearCheckpoint } from "../lib/utils/checkpoint";
 
 const DRY_RUN = process.argv.includes("--dry-run");
+const RESET = process.argv.includes("--reset");
+const CHECKPOINT_FILE = ".checkpoints/ingest-eventbrite.json";
 
 async function main() {
   if (DRY_RUN) console.log("[eventbrite] DRY RUN — no DB writes");
+
+  if (RESET) {
+    await clearCheckpoint(CHECKPOINT_FILE);
+    console.log("[eventbrite] checkpoint reset");
+  }
+  const done = await loadCheckpoint(CHECKPOINT_FILE);
+  if (done.size) console.log(`[eventbrite] ${done.size} already completed, will skip`);
 
   const client = new EventbriteClient();
 
@@ -23,6 +33,11 @@ async function main() {
   for await (const ev of client.allMexicoEvents()) {
     stats.fetched++;
 
+    if (done.has(ev.id)) {
+      console.log(`[eventbrite] skip ${ev.id} (already completed)`);
+      continue;
+    }
+
     const normalized = normalizeEventbriteEvent(ev);
     if (!normalized) {
       stats.skipped_normalize++;
@@ -33,6 +48,7 @@ async function main() {
       console.log(
         `[eventbrite] would ingest: "${normalized.title}" (${normalized.cityName}, ${normalized.date.toISOString().slice(0, 10)})`
       );
+      await markDone(CHECKPOINT_FILE, ev.id);
       continue;
     }
 
@@ -46,6 +62,7 @@ async function main() {
         case "rejected_tribute": stats.tribute_rejected++; break;
         case "rejected_unknown_city": stats.unknown_city++; break;
       }
+      await markDone(CHECKPOINT_FILE, ev.id);
     } catch (err) {
       stats.errors++;
       console.error(
